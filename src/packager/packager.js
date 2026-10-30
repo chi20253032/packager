@@ -1279,7 +1279,7 @@ cd "$(dirname "$0")"
           }
         }
       }
-      const html = createNativeHTML(projectJSON, this.options.app.windowTitle);
+      const html = createNativeHTML(projectJSON, this.options.app.windowTitle, this.options);
       this.ensureNotAborted();
       return {
         data: html,
