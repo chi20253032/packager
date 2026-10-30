@@ -16,7 +16,15 @@ export const createNativeHTML = (project, title = 'Scratch project') => {
   const ctx = canvas.getContext('2d');
   const input = {mouseX:0,mouseY:0,mouseDown:false,keys:new Set()};
   const sprites = project.sprites.filter(s => !s.isStage).map((s,i) => ({
-    ...s, x:s.x, y:s.y, direction:s.direction, visible:s.visible, bubble:'', bubbleUntil:0, running:true, id:i
+    ...s, x:s.x, y:s.y, direction:s.direction, visible:s.visible, bubble:'', bubbleUntil:0, running:true, id:i,
+    images:(s.costumes || []).map(costume => {
+      const encoded=project.assets[costume.asset];
+      if(!encoded)return null;
+      const ext=(costume.asset.split('.').pop()||'png').toLowerCase();
+      const mime=ext==='svg'?'image/svg+xml':ext==='jpg'||ext==='jpeg'?'image/jpeg':'image/png';
+      const image=new Image();image.src='data:'+mime+';base64,'+encoded;
+      return {image,costume};
+    }).filter(Boolean), costumeIndex:0
   }));
   const stage = project.sprites.find(s => s.isStage) || {name:'Stage'};
   let running = true;
@@ -52,7 +60,11 @@ export const createNativeHTML = (project, title = 'Scratch project') => {
     const w=innerWidth,h=innerHeight;ctx.clearRect(0,0,w,h);ctx.fillStyle='#171923';ctx.fillRect(0,0,w,h);
     ctx.save();ctx.translate(w/2,h/2);ctx.scale(w/480,h/360);
     ctx.fillStyle='#fff';ctx.fillRect(-240,-180,480,360);
-    for(const s of sprites){if(!s.visible)continue;ctx.save();ctx.translate(s.x,-s.y);ctx.rotate((s.direction-90)*Math.PI/180);ctx.fillStyle='#4c97ff';ctx.strokeStyle='#245a9b';ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,20*s.size/100,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(6,-5,3,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(6,5,3,0,Math.PI*2);ctx.fill();ctx.restore();
+    for(const s of sprites){if(!s.visible)continue;ctx.save();ctx.translate(s.x,-s.y);ctx.rotate((s.direction-90)*Math.PI/180);ctx.scale(s.size/100,s.size/100);
+      const costume=s.images[s.costumeIndex]||s.images[0];
+      if(costume&&costume.image.complete&&costume.image.naturalWidth){const im=costume.image,c=costume.costume;ctx.drawImage(im,-(c.rotationCenterX||im.naturalWidth/2),-(c.rotationCenterY||im.naturalHeight/2));}
+      else{ctx.fillStyle='#4c97ff';ctx.strokeStyle='#245a9b';ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,20,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(6,-5,3,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(6,5,3,0,Math.PI*2);ctx.fill();}
+      ctx.restore();
       if(s.bubble){ctx.fillStyle='#fff';ctx.strokeStyle='#333';ctx.lineWidth=1;ctx.beginPath();ctx.roundRect(s.x-45,-s.y-54,90,28,8);ctx.fill();ctx.stroke();ctx.fillStyle='#222';ctx.font='12px sans-serif';ctx.textAlign='center';ctx.fillText(s.bubble.slice(0,18),s.x,-s.y-36);}
     }
     ctx.restore();requestAnimationFrame(draw);
