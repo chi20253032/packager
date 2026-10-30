@@ -297,7 +297,7 @@ main{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;
 #stage{width:100%;height:100%;max-width:100%;max-height:100%;aspect-ratio:4/3;object-fit:contain;background:#202536;border-radius:12px;touch-action:none;box-shadow:0 16px 50px #0005}
 #warning{position:fixed;left:10px;right:10px;bottom:max(10px,env(safe-area-inset-bottom));max-height:30vh;overflow:auto;padding:12px 14px;border:1px solid #d69a43;border-radius:12px;background:#3d2c19;color:#ffe1b1;line-height:1.5;white-space:pre-wrap}
 [hidden]{display:none!important}
-${options.custom && options.custom.css ? '<style>' + options.custom.css.replace(/<\\/style/gi, '<\\\\/style') + '</style>' : ''}
+${options.custom && options.custom.css ? options.custom.css.replaceAll('</style', '<\\/style') : ''}
 @media(max-width:520px){header{height:54px;flex-basis:54px;padding:6px 8px;gap:6px}.brand{display:none}button{padding:8px 11px;min-height:42px}main{padding:4px}#stage{border-radius:8px}}
 </style>
 </head>
