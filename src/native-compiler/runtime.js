@@ -25,18 +25,28 @@ const keyName = value => ({
 })[text(value).toLowerCase()] || text(value).toLowerCase();
 
 export class NativeRuntime {
-  constructor(project, host = {}) {
+  static clamp(value, min, max) { return Math.max(min, Math.min(max, value)); }
+  static number(value) { const n = Number(value); return Number.isFinite(n) ? n : 0; }
+  static text(value) { return value === null || value === undefined ? '' : String(value); }
+  static truthy(value) {
+    if (typeof value === 'string') return value.length > 0 && value !== '0';
+    return Boolean(value);
+  }
+  static keyName(value) {
+    const key = NativeRuntime.text(value).toLowerCase();
+    return ({' ':'space','arrowup':'up','arrowdown':'down','arrowleft':'left','arrowright':'right','enter':'enter','escape':'escape'})[key] || key;
+  }  constructor(project, host = {}) {
     if (!project || !Array.isArray(project.targets)) throw new Error('Invalid SB3 project: targets missing');
     this.project = project;
     this.host = host;
     this.options = project.nativeOptions || {};
-    this.stageWidth = clamp(number(this.options.stageWidth ?? 480), 1, 10000);
-    this.stageHeight = clamp(number(this.options.stageHeight ?? 360), 1, 10000);
-    this.maxClones = this.options.maxClones == null ? Infinity : Math.max(0, Math.floor(number(this.options.maxClones)));
+    this.stageWidth = NativeRuntime.clamp(NativeRuntime.number(this.options.stageWidth ?? 480), 1, 10000);
+    this.stageHeight = NativeRuntime.clamp(NativeRuntime.number(this.options.stageHeight ?? 360), 1, 10000);
+    this.maxClones = this.options.maxClones == null ? Infinity : Math.max(0, Math.floor(NativeRuntime.number(this.options.maxClones)));
     this.fencing = this.options.fencing !== false;
     this.turbo = !!this.options.turbo;
-    this.framerate = clamp(number(this.options.framerate ?? 30), 1, 240);
-    this.username = text(this.options.username || 'player').replace(/####/g, String(Math.floor(Math.random()*9000)+1000));
+    this.framerate = NativeRuntime.clamp(NativeRuntime.number(this.options.framerate ?? 30), 1, 240);
+    this.username = NativeRuntime.text(this.options.username || 'player').replace(/####/g, String(Math.floor(Math.random()*9000)+1000));
     this.running = false;
     this.paused = false;
     this.frame = 0;
@@ -70,11 +80,11 @@ export class NativeRuntime {
     return {
       id: raw.id || 'target-' + index, name: raw.name || 'Sprite ' + index,
       isStage: !!raw.isStage, blocks: raw.blocks || {}, variables, lists,
-      x: number(raw.x), y: number(raw.y), direction: number(raw.direction || 90),
-      size: number(raw.size || 100), visible: raw.visible !== false,
+      x: NativeRuntime.number(raw.x), y: NativeRuntime.number(raw.y), direction: NativeRuntime.number(raw.direction || 90),
+      size: NativeRuntime.number(raw.size || 100), visible: raw.visible !== false,
       draggable: !!raw.draggable, rotationStyle: raw.rotationStyle || 'all around',
-      currentCostume: number(raw.currentCostume), costumes: raw.costumes || [], sounds: raw.sounds || [],
-      volume: number(raw.volume ?? 100), layerOrder: number(raw.layerOrder ?? index),
+      currentCostume: NativeRuntime.number(raw.currentCostume), costumes: raw.costumes || [], sounds: raw.sounds || [],
+      volume: NativeRuntime.number(raw.volume ?? 100), layerOrder: NativeRuntime.number(raw.layerOrder ?? index),
       effects: {...(raw.effects || {})}, clones: [], alive: true, bubble: null,
       timer: 0, touching: Object.create(null), isOriginal: true
     };
@@ -119,12 +129,12 @@ export class NativeRuntime {
 
   fence(target) {
     if (!this.fencing || target.isStage) return;
-    target.x = clamp(target.x, -this.stageWidth / 2, this.stageWidth / 2);
-    target.y = clamp(target.y, -this.stageHeight / 2, this.stageHeight / 2);
+    target.x = NativeRuntime.clamp(target.x, -this.stageWidth / 2, this.stageWidth / 2);
+    target.y = NativeRuntime.clamp(target.y, -this.stageHeight / 2, this.stageHeight / 2);
   }
 
   async wait(seconds, thread) {
-    const end = performance.now() + Math.max(0, number(seconds) * 1000);
+    const end = performance.now() + Math.max(0, NativeRuntime.number(seconds) * 1000);
     while (this.running && !thread.cancelled && performance.now() < end) {
       const remaining = end - performance.now();
       await new Promise(resolve => setTimeout(resolve, Math.min(16, Math.max(1, remaining))));
@@ -213,9 +223,9 @@ export class NativeRuntime {
     const v = name => this.value(target, block, name, thread, depth + 1);
     const a = async name => await v(name);
     switch (block.opcode) {
-      case 'math_number': return number(this.field(block, 'NUM', 0));
-      case 'math_integer': return Math.floor(number(this.field(block, 'NUM', 0)));
-      case 'math_whole_number': return Math.floor(number(this.field(block, 'NUM', 0)));
+      case 'math_number': return NativeRuntime.number(this.field(block, 'NUM', 0));
+      case 'math_integer': return Math.floor(NativeRuntime.number(this.field(block, 'NUM', 0)));
+      case 'math_whole_number': return Math.floor(NativeRuntime.number(this.field(block, 'NUM', 0)));
       case 'text': return this.field(block, 'TEXT', '');
       case 'logic_boolean': return this.field(block, 'BOOL') === 'TRUE';
       case 'logic_null': return null;
@@ -226,23 +236,23 @@ export class NativeRuntime {
       case 'data_listcontents': return this.getList(target, this.fieldId(block, 'LIST')).value.join(' ');
       case 'data_lengthoflist': return this.getList(target, this.fieldId(block, 'LIST')).value.length;
       case 'data_itemoflist': { const list=this.getList(target,this.fieldId(block,'LIST')).value,index=this.listIndex(await a('INDEX'),list.length); return index<0?'':list[index]; }
-      case 'data_itemnumoflist': { const list=this.getList(target,this.fieldId(block,'LIST')).value,item=text(await a('ITEM')); return list.findIndex(value=>text(value)===item)+1; }
-      case 'data_listcontainsitem': { const list=this.getList(target,this.fieldId(block,'LIST')).value,item=text(await a('ITEM')).toLowerCase(); return list.some(value=>text(value).toLowerCase()===item); }
-      case 'operator_add': case 'math_add': return number(await a('NUM1')) + number(await a('NUM2'));
-      case 'operator_subtract': case 'math_subtract': return number(await a('NUM1')) - number(await a('NUM2'));
-      case 'operator_multiply': case 'math_multiply': return number(await a('NUM1')) * number(await a('NUM2'));
-      case 'operator_divide': case 'math_divide': return number(await a('NUM1')) / number(await a('NUM2'));
+      case 'data_itemnumoflist': { const list=this.getList(target,this.fieldId(block,'LIST')).value,item=NativeRuntime.text(await a('ITEM')); return list.findIndex(value=>NativeRuntime.text(value)===item)+1; }
+      case 'data_listcontainsitem': { const list=this.getList(target,this.fieldId(block,'LIST')).value,item=NativeRuntime.text(await a('ITEM')).toLowerCase(); return list.some(value=>NativeRuntime.text(value).toLowerCase()===item); }
+      case 'operator_add': case 'math_add': return NativeRuntime.number(await a('NUM1')) + NativeRuntime.number(await a('NUM2'));
+      case 'operator_subtract': case 'math_subtract': return NativeRuntime.number(await a('NUM1')) - NativeRuntime.number(await a('NUM2'));
+      case 'operator_multiply': case 'math_multiply': return NativeRuntime.number(await a('NUM1')) * NativeRuntime.number(await a('NUM2'));
+      case 'operator_divide': case 'math_divide': return NativeRuntime.number(await a('NUM1')) / NativeRuntime.number(await a('NUM2'));
       case 'math_modulo': case 'operator_mod': {
-        const x = number(await a('NUM1')), y = number(await a('NUM2'));
+        const x = NativeRuntime.number(await a('NUM1')), y = NativeRuntime.number(await a('NUM2'));
         return y === 0 ? 0 : ((x % y) + y) % y;
       }
-      case 'math_round': case 'operator_round': return Math.round(number(await a('NUM')));
+      case 'math_round': case 'operator_round': return Math.round(NativeRuntime.number(await a('NUM')));
       case 'math_random': case 'operator_random': {
-        const x = number(await a('FROM')), y = number(await a('TO'));
+        const x = NativeRuntime.number(await a('FROM')), y = NativeRuntime.number(await a('TO'));
         return Math.floor(Math.random() * (Math.abs(y - x) + 1)) + Math.min(x, y);
       }
       case 'math_single': case 'operator_mathop': {
-        const n = number(await a('NUM')), op = this.field(block, 'OPERATOR');
+        const n = NativeRuntime.number(await a('NUM')), op = this.field(block, 'OPERATOR');
         const f = {abs:Math.abs, floor:Math.floor, ceiling:Math.ceil, sqrt:Math.sqrt, ln:Math.log, log:Math.log10, 'e ^':Math.exp, '10 ^':x=>10**x,
           sin:x=>Math.sin(x*Math.PI/180), cos:x=>Math.cos(x*Math.PI/180), tan:x=>Math.tan(x*Math.PI/180),
           asin:x=>Math.asin(x)*180/Math.PI, acos:x=>Math.acos(x)*180/Math.PI, atan:x=>Math.atan(x)*180/Math.PI}[op];
@@ -251,30 +261,30 @@ export class NativeRuntime {
       case 'operator_equals': {
         const left=await a('OPERAND1'), right=await a('OPERAND2');
         const leftNumber=Number(left), rightNumber=Number(right);
-        if(text(left).trim()!=='' && text(right).trim()!=='' && Number.isFinite(leftNumber) && Number.isFinite(rightNumber)) return leftNumber===rightNumber;
-        return text(left).toLowerCase()===text(right).toLowerCase();
+        if(NativeRuntime.text(left).trim()!=='' && NativeRuntime.text(right).trim()!=='' && Number.isFinite(leftNumber) && Number.isFinite(rightNumber)) return leftNumber===rightNumber;
+        return NativeRuntime.text(left).toLowerCase()===NativeRuntime.text(right).toLowerCase();
       }
-      case 'operator_gt': return number(await a('OPERAND1')) > number(await a('OPERAND2'));
-      case 'operator_lt': return number(await a('OPERAND1')) < number(await a('OPERAND2'));
-      case 'operator_and': return truthy(await a('OPERAND1')) && truthy(await a('OPERAND2'));
-      case 'operator_or': return truthy(await a('OPERAND1')) || truthy(await a('OPERAND2'));
-      case 'operator_not': return !truthy(await a('OPERAND'));
-      case 'operator_join': return text(await a('STRING1')) + text(await a('STRING2'));
-      case 'operator_length': return text(await a('STRING')).length;
-      case 'operator_contains': return text(await a('STRING1')).toLowerCase().includes(text(await a('STRING2')).toLowerCase());
+      case 'operator_gt': return NativeRuntime.number(await a('OPERAND1')) > NativeRuntime.number(await a('OPERAND2'));
+      case 'operator_lt': return NativeRuntime.number(await a('OPERAND1')) < NativeRuntime.number(await a('OPERAND2'));
+      case 'operator_and': return NativeRuntime.truthy(await a('OPERAND1')) && NativeRuntime.truthy(await a('OPERAND2'));
+      case 'operator_or': return NativeRuntime.truthy(await a('OPERAND1')) || NativeRuntime.truthy(await a('OPERAND2'));
+      case 'operator_not': return !NativeRuntime.truthy(await a('OPERAND'));
+      case 'operator_join': return NativeRuntime.text(await a('STRING1')) + NativeRuntime.text(await a('STRING2'));
+      case 'operator_length': return NativeRuntime.text(await a('STRING')).length;
+      case 'operator_contains': return NativeRuntime.text(await a('STRING1')).toLowerCase().includes(NativeRuntime.text(await a('STRING2')).toLowerCase());
       case 'operator_letter_of': {
-        const str = Array.from(text(await a('STRING'))), index = Math.floor(number(await a('LETTER'))) - 1;
+        const str = Array.from(NativeRuntime.text(await a('STRING'))), index = Math.floor(NativeRuntime.number(await a('LETTER'))) - 1;
         return str[index] || '';
       }
       case 'operator_of': {
         const property = this.field(block, 'PROPERTY').toLowerCase().replace(/[\\s_]/g,'');
-        const object = text(await a('OBJECT'));
+        const object = NativeRuntime.text(await a('OBJECT'));
         const other = this.targets.find(item => item.name === object);
         if (!other) return 0;
         return ({xposition:other.x, yposition:other.y, direction:other.direction, costume:other.currentCostume + 1, size:other.size, volume:other.volume})[property] ?? 0;
       }
       case 'sensing_touchingobject': {
-        const who=text(await a('TOUCHINGOBJECTMENU'));
+        const who=NativeRuntime.text(await a('TOUCHINGOBJECTMENU'));
         if(who==='_mouse_') return this.host.hitTest ? this.host.hitTest(target,this.mouse.x,this.mouse.y) : false;
         if(who==='_edge_') return target.x < -this.stageWidth/2 || target.x > this.stageWidth/2 || target.y < -this.stageHeight/2 || target.y > this.stageHeight/2;
         const other=this.targets.find(item=>item.name===who);
@@ -288,7 +298,7 @@ export class NativeRuntime {
       case 'sensing_mousex': return this.mouse.x;
       case 'sensing_mousey': return this.mouse.y;
       case 'sensing_mousedown': return this.mouse.down;
-      case 'sensing_keypressed': return this.keys.has(keyName(await a('KEY_OPTION')));
+      case 'sensing_keypressed': return this.keys.has(NativeRuntime.keyName(await a('KEY_OPTION')));
       case 'sensing_timer': return (performance.now() - this.startedAt) / 1000;
       case 'sensing_answer': return this.answer ?? '';
       case 'sensing_username': return this.username || 'player';
@@ -298,7 +308,7 @@ export class NativeRuntime {
       }
       case 'sensing_dayssince2000': return (Date.now() - Date.UTC(2000,0,1)) / 86400000;
       case 'sensing_distanceto': {
-        const who = text(await a('DISTANCETOMENU'));
+        const who = NativeRuntime.text(await a('DISTANCETOMENU'));
         const other = this.targets.find(item => item.name === who);
         return other ? Math.hypot(other.x-target.x, other.y-target.y) : Math.hypot(this.mouse.x-target.x,this.mouse.y-target.y);
       }
@@ -331,7 +341,7 @@ export class NativeRuntime {
 
   async executeBlock(target, block, thread) {
     const v = name => this.value(target, block, name, thread);
-    const n = async name => number(await v(name));
+    const n = async name => NativeRuntime.number(await v(name));
     switch (block.opcode) {
       case 'motion_movesteps': {
         const radians = target.direction * Math.PI / 180, distance = await n('STEPS');
@@ -340,7 +350,7 @@ export class NativeRuntime {
       case 'motion_turnright': target.direction += await n('DEGREES'); break;
       case 'motion_turnleft': target.direction -= await n('DEGREES'); break;
       case 'motion_goto': {
-        const dest = text(await v('TO'));
+        const dest = NativeRuntime.text(await v('TO'));
         const other = this.targets.find(item => item.name === dest);
         if (dest === '_mouse_') { target.x=this.mouse.x; target.y=this.mouse.y; }
         else if (dest === '_random_') { target.x=Math.random()*this.stageWidth-this.stageWidth/2; target.y=Math.random()*this.stageHeight-this.stageHeight/2; }
@@ -351,7 +361,7 @@ export class NativeRuntime {
       case 'motion_glidesecstoxy': {
         const duration = Math.max(0, await n('SECS')), sx=target.x, sy=target.y, x=await n('X'), y=await n('Y'), start=performance.now();
         while (this.running && !thread.cancelled) {
-          const t = duration ? clamp((performance.now()-start)/(duration*1000),0,1) : 1;
+          const t = duration ? NativeRuntime.clamp((performance.now()-start)/(duration*1000),0,1) : 1;
           target.x=sx+(x-sx)*t; target.y=sy+(y-sy)*t; this.fence(target);
           this.host.onTargetChange?.(target, block.opcode);
           if (t >= 1) break;
@@ -365,7 +375,7 @@ export class NativeRuntime {
       case 'motion_changeyby': target.y+=await n('DY'); this.fence(target); break;
       case 'motion_pointindirection': target.direction=await n('DIRECTION'); break;
       case 'motion_pointtowards': {
-        const dest=text(await v('TOWARDS')), other=this.targets.find(item=>item.name===dest);
+        const dest=NativeRuntime.text(await v('TOWARDS')), other=this.targets.find(item=>item.name===dest);
         const x=dest==='_mouse_'?this.mouse.x:other?.x, y=dest==='_mouse_'?this.mouse.y:other?.y;
         if (x!==undefined) target.direction=Math.atan2(x-target.x,y-target.y)*180/Math.PI;
         break;
@@ -374,7 +384,7 @@ export class NativeRuntime {
         let dx=Math.sin(target.direction*Math.PI/180),dy=Math.cos(target.direction*Math.PI/180);
         if(target.x>this.stageWidth/2-20||target.x< -this.stageWidth/2+20)dx=-dx;
         if(target.y>this.stageHeight/2-20||target.y< -this.stageHeight/2+20)dy=-dy;
-        target.x=clamp(target.x,-this.stageWidth/2+20,this.stageWidth/2-20);target.y=clamp(target.y,-this.stageHeight/2+20,this.stageHeight/2-20);
+        target.x=NativeRuntime.clamp(target.x,-this.stageWidth/2+20,this.stageWidth/2-20);target.y=NativeRuntime.clamp(target.y,-this.stageHeight/2+20,this.stageHeight/2-20);
         target.direction=Math.atan2(dx,dy)*180/Math.PI;
         break;
       }
@@ -385,11 +395,11 @@ export class NativeRuntime {
       case 'looks_nextcostume': target.currentCostume=(target.currentCostume+1)%Math.max(1,target.costumes.length); break;
       case 'looks_switchbackdropto': case 'looks_switchbackdroptoandwait': {
         if (target.isStage) {
-          const name=text(await v('BACKDROP')), index=target.costumes.findIndex(costume=>costume.name===name);
+          const name=NativeRuntime.text(await v('BACKDROP')), index=target.costumes.findIndex(costume=>costume.name===name);
           if(index>=0) target.currentCostume=index;
           const jobs=[];
           for(const sprite of this.targets) for(const hat of Object.values(sprite.blocks)) {
-            if(hat?.topLevel && hat.opcode==='event_whenbackdropswitchesto' && text(hat.fields?.BACKDROP?.[0])===name) jobs.push(this.launch(sprite,hat));
+            if(hat?.topLevel && hat.opcode==='event_whenbackdropswitchesto' && NativeRuntime.text(hat.fields?.BACKDROP?.[0])===name) jobs.push(this.launch(sprite,hat));
           }
           if(block.opcode.endsWith('andwait')) await Promise.all(jobs);
         }
@@ -398,43 +408,43 @@ export class NativeRuntime {
       case 'looks_nextbackdrop': if(target.isStage) {
         target.currentCostume=(target.currentCostume+1)%Math.max(1,target.costumes.length);
         const name=target.costumes[target.currentCostume]?.name;
-        for(const sprite of this.targets) for(const hat of Object.values(sprite.blocks)) if(hat?.topLevel&&hat.opcode==='event_whenbackdropswitchesto'&&text(hat.fields?.BACKDROP?.[0])===name)this.launch(sprite,hat);
+        for(const sprite of this.targets) for(const hat of Object.values(sprite.blocks)) if(hat?.topLevel&&hat.opcode==='event_whenbackdropswitchesto'&&NativeRuntime.text(hat.fields?.BACKDROP?.[0])===name)this.launch(sprite,hat);
       } break;
       case 'looks_gotofrontback': target.layerOrder= this.field(block,'FRONT_BACK')==='front'?Math.max(...this.targets.map(t=>t.layerOrder))+1:Math.min(...this.targets.map(t=>t.layerOrder))-1; break;
       case 'looks_switchcostumeto': {
-        const name=text(await v('COSTUME')), index=target.costumes.findIndex(c=>c.name===name);
+        const name=NativeRuntime.text(await v('COSTUME')), index=target.costumes.findIndex(c=>c.name===name);
         if (index>=0) target.currentCostume=index;
         break;
       }
-      case 'looks_say': target.bubble={type:'say',text:text(await v('MESSAGE'))}; break;
-      case 'looks_think': target.bubble={type:'think',text:text(await v('MESSAGE'))}; break;
+      case 'looks_say': target.bubble={type:'say',text:NativeRuntime.text(await v('MESSAGE'))}; break;
+      case 'looks_think': target.bubble={type:'think',text:NativeRuntime.text(await v('MESSAGE'))}; break;
       case 'looks_sayforsecs': case 'looks_thinkforsecs': {
-        target.bubble={type:block.opcode.includes('think')?'think':'say',text:text(await v('MESSAGE'))};
+        target.bubble={type:block.opcode.includes('think')?'think':'say',text:NativeRuntime.text(await v('MESSAGE'))};
         this.host.onTargetChange?.(target, block.opcode);
         await this.wait(await n('SECS'),thread); target.bubble=null;
         this.host.onTargetChange?.(target, block.opcode); break;
       }
       case 'looks_cleargraphiceffects': target.effects={}; break;
       case 'looks_changeeffectby': {
-        const effect=this.field(block,'EFFECT'); target.effects[effect]=number(target.effects[effect])+await n('CHANGE'); break;
+        const effect=this.field(block,'EFFECT'); target.effects[effect]=NativeRuntime.number(target.effects[effect])+await n('CHANGE'); break;
       }
       case 'looks_seteffectto': target.effects[this.field(block,'EFFECT')]=await n('VALUE'); break;
       case 'looks_goforwardbackwardlayers': target.layerOrder += (this.field(block,'FORWARD_BACKWARD')==='forward'?1:-1)*await n('NUM'); break;
       case 'sound_play': case 'sound_playuntildone': {
-        const name=text(await v('SOUND_MENU'));
+        const name=NativeRuntime.text(await v('SOUND_MENU'));
         const playback=this.host.playSound ? this.host.playSound(target,name) : Promise.resolve();
         if(block.opcode==='sound_playuntildone') await playback;
         break;
       }
-      case 'sound_setvolumeto': case 'sound_setvolume': target.volume=clamp(await n('VOLUME'),0,100); break;
-      case 'sound_changevolumeby': case 'sound_changevolume': target.volume=clamp(target.volume+await n('VOLUME'),0,100); break;
+      case 'sound_setvolumeto': case 'sound_setvolume': target.volume=NativeRuntime.clamp(await n('VOLUME'),0,100); break;
+      case 'sound_changevolumeby': case 'sound_changevolume': target.volume=NativeRuntime.clamp(target.volume+await n('VOLUME'),0,100); break;
       case 'sound_stopallsounds': this.host.stopAllSounds?.(); break;
       case 'sensing_resettimer': this.startedAt=performance.now(); break;
-      case 'sensing_askandwait': this.answer = await (this.host.ask ? this.host.ask(text(await v('QUESTION'))) : (typeof prompt === 'function' ? prompt(text(await v('QUESTION'))) : '')); break;
+      case 'sensing_askandwait': this.answer = await (this.host.ask ? this.host.ask(NativeRuntime.text(await v('QUESTION'))) : (typeof prompt === 'function' ? prompt(NativeRuntime.text(await v('QUESTION'))) : '')); break;
       case 'data_setvariableto': this.setVariable(target,this.fieldId(block,'VARIABLE'),await v('VALUE')); break;
       case 'data_changevariableby': {
         const id=this.field(block,'VARIABLE'), current=this.getVariable(target,id).value;
-        this.setVariable(target,id,number(current)+await n('VALUE')); break;
+        this.setVariable(target,id,NativeRuntime.number(current)+await n('VALUE')); break;
       }
       case 'data_addtolist': this.getList(target,this.fieldId(block,'LIST')).value.push(await v('ITEM')); break;
       case 'data_deleteoflist': {
@@ -452,30 +462,30 @@ export class NativeRuntime {
       }
       case 'control_wait': await this.wait(await n('DURATION'),thread); break;
       case 'control_repeat': {
-        const count=clamp(Math.floor(await n('TIMES')),0,100000);
+        const count=NativeRuntime.clamp(Math.floor(await n('TIMES')),0,100000);
         for(let i=0;i<count && this.running && !thread.cancelled;i++){await this.substack(target,block,'SUBSTACK',thread);await this.yield();}
         break;
       }
       case 'control_forever':
         while(this.running && !thread.cancelled && target.alive){await this.substack(target,block,'SUBSTACK',thread);await this.yield();}
         break;
-      case 'control_if': if(truthy(await v('CONDITION'))) await this.substack(target,block,'SUBSTACK',thread); break;
-      case 'control_if_else': await this.substack(target,block,truthy(await v('CONDITION'))?'SUBSTACK':'SUBSTACK2',thread); break;
+      case 'control_if': if(NativeRuntime.truthy(await v('CONDITION'))) await this.substack(target,block,'SUBSTACK',thread); break;
+      case 'control_if_else': await this.substack(target,block,NativeRuntime.truthy(await v('CONDITION'))?'SUBSTACK':'SUBSTACK2',thread); break;
       case 'control_repeat_until':
-        while(this.running && !thread.cancelled && !truthy(await v('CONDITION'))){await this.substack(target,block,'SUBSTACK',thread);await new Promise(resolve=>setTimeout(resolve,16));}
+        while(this.running && !thread.cancelled && !NativeRuntime.truthy(await v('CONDITION'))){await this.substack(target,block,'SUBSTACK',thread);await new Promise(resolve=>setTimeout(resolve,16));}
         break;
       case 'control_wait_until':
-        while(this.running && !thread.cancelled && !truthy(await v('CONDITION'))) await new Promise(resolve=>setTimeout(resolve,16));
+        while(this.running && !thread.cancelled && !NativeRuntime.truthy(await v('CONDITION'))) await new Promise(resolve=>setTimeout(resolve,16));
         break;
       case 'control_stop': {
         const option=this.field(block,'STOP_OPTION','all');
         if(option==='all') this.stopAll(); else if(option==='this script') thread.cancelled=true; else this.stopTarget(target);
         break;
       }
-      case 'event_broadcast': await this.broadcast(text(await v('BROADCAST_INPUT')),false); break;
-      case 'event_broadcastandwait': await this.broadcast(text(await v('BROADCAST_INPUT')),true); break;
+      case 'event_broadcast': await this.broadcast(NativeRuntime.text(await v('BROADCAST_INPUT')),false); break;
+      case 'event_broadcastandwait': await this.broadcast(NativeRuntime.text(await v('BROADCAST_INPUT')),true); break;
       case 'control_create_clone_of': {
-        const name=text(await v('CLONE_OPTION'));
+        const name=NativeRuntime.text(await v('CLONE_OPTION'));
         const original=name==='_myself_'?target:this.targets.find(t=>t.name===name);
         if(original) this.createClone(original);
         break;
@@ -496,18 +506,18 @@ export class NativeRuntime {
   }
 
   listIndex(value, length, allowEnd = false) {
-    const s=text(value).toLowerCase();
+    const s=NativeRuntime.text(value).toLowerCase();
     if(s==='last') return allowEnd?length:length-1;
     if(s==='random'||s==='any') return length?Math.floor(Math.random()*length):0;
-    const n=Math.floor(number(value))-1;
-    return allowEnd?clamp(n,0,length):n>=0&&n<length?n:-1;
+    const n=Math.floor(NativeRuntime.number(value))-1;
+    return allowEnd?NativeRuntime.clamp(n,0,length):n>=0&&n<length?n:-1;
   }
 
   async broadcast(name, wait) {
     const jobs=[];
     for(const target of this.targets) {
       for(const block of Object.values(target.blocks)) {
-        if(block?.topLevel && block.opcode==='event_whenbroadcastreceived' && text(block.fields?.BROADCAST_OPTION?.[0])===name) jobs.push(this.launch(target,block));
+        if(block?.topLevel && block.opcode==='event_whenbroadcastreceived' && NativeRuntime.text(block.fields?.BROADCAST_OPTION?.[0])===name) jobs.push(this.launch(target,block));
       }
     }
     if(wait) await Promise.all(jobs);
@@ -522,11 +532,11 @@ export class NativeRuntime {
   }
 
   keyDown(key) {
-    const normalized=keyName(key);this.keys.add(normalized);
-    this.runHat('event_whenkeypressed',block=>keyName(block.fields?.KEY_OPTION?.[0])===normalized);
+    const normalized=NativeRuntime.keyName(key);this.keys.add(normalized);
+    this.runHat('event_whenkeypressed',block=>NativeRuntime.keyName(block.fields?.KEY_OPTION?.[0])===normalized);
   }
-  keyUp(key) {this.keys.delete(keyName(key));}
-  pointerMove(x,y) {this.mouse.x=number(x);this.mouse.y=number(y);}
+  keyUp(key) {this.keys.delete(NativeRuntime.keyName(key));}
+  pointerMove(x,y) {this.mouse.x=NativeRuntime.number(x);this.mouse.y=NativeRuntime.number(y);}
   pointerDown(x,y) {this.pointerMove(x,y);this.mouse.down=true;this.runHat('event_whenthisspriteclicked',(_b,t)=>!t.isStage&&this.host.hitTest?.(t,x,y));this.runHat('event_whenstageclicked',(_b,t)=>t.isStage);}
   pointerUp() {this.mouse.down=false;}
 }
@@ -534,14 +544,9 @@ export class NativeRuntime {
 
 /**
  * Serialize the native interpreter into a self-contained browser script.
- * Kept as source so exported HTML never needs a module loader or Scratch VM.
+ * All helpers are static class methods so minification cannot break source serialization.
  */
 export const getNativeRuntimeSource = () => [
-  'const clamp = ' + clamp.toString() + ';',
-  'const number = ' + number.toString() + ';',
-  'const text = ' + text.toString() + ';',
-  'const truthy = ' + truthy.toString() + ';',
-  'const keyName = ' + keyName.toString() + ';',
-  'const NATIVE_RUNTIME_SUPPORTED = new Set(' + JSON.stringify([...NATIVE_RUNTIME_SUPPORTED]) + ');',
-  'const NativeRuntime = ' + NativeRuntime.toString() + ';'
-].join('\n');
+  'const NativeRuntime = ' + NativeRuntime.toString() + ';',
+  'const NATIVE_RUNTIME_SUPPORTED = new Set(' + JSON.stringify([...NATIVE_RUNTIME_SUPPORTED]) + ');'
+].join('\\n');
