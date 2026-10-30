@@ -88,6 +88,10 @@ describe('native Scratch compiler', () => {
     expect(html).toContain('Native Test');
     expect(html).not.toContain('Scaffolding');
     expect(html).not.toContain('scratch-vm');
+    expect(html).toContain('class NativeRuntime');
+    const script = html.match(/<script>([\\s\\S]*?)<\\/script>/)[1];
+    expect(script).toContain('NATIVE_RUNTIME_SUPPORTED');
+    expect(() => new Function(script)).not.toThrow();
   });
 
   test('rejects malformed project data', () => {
