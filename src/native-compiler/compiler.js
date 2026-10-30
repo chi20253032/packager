@@ -131,6 +131,12 @@ export const compileNativeProject = (project) => {
       direction: Number(target.direction) || 90,
       size: Number(target.size) || 100,
       visible: target.visible !== false,
+      costumes: (target.costumes || []).map(costume => ({
+        name: costume.name,
+        asset: costume.md5ext || (costume.assetId && (costume.assetId + '.' + costume.dataFormat)),
+        rotationCenterX: costume.rotationCenterX || 0,
+        rotationCenterY: costume.rotationCenterY || 0
+      })),
       scripts
     };
   });
@@ -138,6 +144,7 @@ export const compileNativeProject = (project) => {
     version: 1,
     meta: {semantics: 'native-js-subset', projectName: project.projectName || 'Scratch project'},
     sprites,
+    assets: project.nativeAssets || {},
     unsupportedOpcodes: [...diagnostics].sort()
   };
 };
