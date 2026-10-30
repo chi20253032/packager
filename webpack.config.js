@@ -160,7 +160,7 @@ const makeWebsite = () => ({
         options: {
           babelrc: false,
           configFile: false,
-          presets: [['@babel/preset-env', {targets: {chrome: '80'}}]]
+          presets: [['@babel/preset-env', {targets: {chrome: '70'}}]]
         }
       },
       {
