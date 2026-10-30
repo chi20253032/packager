@@ -17,7 +17,7 @@ const truthy = value => {
   if (typeof value === 'string') return value.length > 0 && value !== '0';
   return Boolean(value);
 };
-const NATIVE_RUNTIME_SUPPORTED = new Set(["event_whenflagclicked","event_whenkeypressed","event_whenthisspriteclicked","event_whenstageclicked","event_whenbroadcastreceived","event_whenbackdropswitchesto","control_start_as_clone","motion_movesteps","motion_turnright","motion_turnleft","motion_goto","motion_gotoxy","motion_glidesecstoxy","motion_setx","motion_sety","motion_changexby","motion_changeyby","motion_pointindirection","motion_pointtowards","motion_ifonedgebounce","motion_xposition","motion_yposition","motion_direction","looks_show","looks_hide","looks_setsizeto","looks_changesizeby","looks_nextcostume","looks_switchcostumeto","looks_say","looks_think","looks_sayforsecs","looks_thinkforsecs","looks_gotofrontback","looks_goforwardbackwardlayers","looks_switchbackdropto","looks_switchbackdroptoandwait","looks_nextbackdrop","looks_size","looks_costumenumbername","data_variable","data_setvariableto","data_changevariableby","data_listcontents","data_lengthoflist","data_addtolist","data_deleteoflist","data_deletealloflist","data_insertatlist","data_replaceitemoflist","data_itemoflist","data_itemnumoflist","data_listcontainsitem","control_wait","control_repeat","control_forever","control_if","control_if_else","control_repeat_until","control_wait_until","control_stop","control_create_clone_of","control_delete_this_clone","event_broadcast","event_broadcastandwait","math_number","math_integer","math_whole_number","text","logic_boolean","logic_null","colour_picker","math_add","math_subtract","math_multiply","math_divide","math_modulo","math_round","math_random","math_single","operator_add","operator_subtract","operator_multiply","operator_divide","operator_mod","operator_round","operator_random","operator_mathop","operator_equals","operator_gt","operator_lt","operator_and","operator_or","operator_not","operator_join","operator_length","operator_contains","operator_letter_of","operator_of","sensing_mousex","sensing_mousey","sensing_mousedown","sensing_keypressed","sensing_timer","sensing_resettimer","sensing_answer","sensing_askandwait","sensing_username","sensing_current","sensing_dayssince2000","sensing_distanceto","sensing_touchingobject","sound_sounds_menu","sound_volume","sound_play","sound_playuntildone","sound_setvolumeto","sound_setvolume","sound_changevolumeby","sound_changevolume","sound_stopallsounds"]);
+const NATIVE_RUNTIME_SUPPORTED = new Set(["event_whenflagclicked","event_whenkeypressed","event_whenthisspriteclicked","event_whenstageclicked","event_whenbroadcastreceived","event_whenbackdropswitchesto","control_start_as_clone","motion_movesteps","motion_turnright","motion_turnleft","motion_goto","motion_gotoxy","motion_glidesecstoxy","motion_setx","motion_sety","motion_changexby","motion_changeyby","motion_pointindirection","motion_pointtowards","motion_ifonedgebounce","motion_xposition","motion_yposition","motion_direction","looks_show","looks_hide","looks_setsizeto","looks_changesizeby","looks_nextcostume","looks_switchcostumeto","looks_say","looks_think","looks_sayforsecs","looks_thinkforsecs","looks_gotofrontback","looks_goforwardbackwardlayers","looks_switchbackdropto","looks_switchbackdroptoandwait","looks_nextbackdrop","looks_size","looks_costumenumbername","data_variable","data_setvariableto","data_changevariableby","data_listcontents","data_lengthoflist","data_addtolist","data_deleteoflist","data_deletealloflist","data_insertatlist","data_replaceitemoflist","data_itemoflist","data_itemnumoflist","data_listcontainsitem","control_wait","control_repeat","control_forever","control_if","control_if_else","control_repeat_until","control_wait_until","control_stop","control_create_clone_of","control_delete_this_clone","event_broadcast","event_broadcastandwait","math_number","math_integer","math_whole_number","text","logic_boolean","logic_null","colour_picker","math_add","math_subtract","math_multiply","math_divide","math_modulo","math_round","math_random","math_single","operator_add","operator_subtract","operator_multiply","operator_divide","operator_mod","operator_round","operator_random","operator_mathop","operator_equals","operator_gt","operator_lt","operator_and","operator_or","operator_not","operator_join","operator_length","operator_contains","operator_letter_of","operator_of","sensing_mousex","sensing_mousey","sensing_mousedown","sensing_keypressed","sensing_timer","sensing_resettimer","sensing_answer","sensing_askandwait","sensing_username","sensing_current","sensing_dayssince2000","sensing_distanceto","sensing_touchingobject","sound_sounds_menu","sound_volume","sound_play","sound_playuntildone","sound_setvolumeto","sound_setvolume","sound_changevolumeby","sound_changevolume","sound_stopallsounds","motion_goto_menu","motion_pointtowards_menu","looks_costume","looks_backdrops","event_broadcast_menu","control_create_clone_of_menu","sensing_keyoptions","sensing_touchingobjectmenu","sensing_distancetomenu","sensing_of_object_menu","sensing_of","looks_backdropnumbername","motion_setrotationstyle"]);
 
 const keyName = value => ({
   ' ':'space', 'arrowup':'up', 'arrowdown':'down', 'arrowleft':'left',
@@ -82,8 +82,8 @@ export class NativeRuntime {
     return {
       id: raw.id || 'target-' + index, name: raw.name || 'Sprite ' + index,
       isStage: !!raw.isStage, blocks: raw.blocks || {}, variables, lists,
-      x: NativeRuntime.number(raw.x), y: NativeRuntime.number(raw.y), direction: NativeRuntime.number(raw.direction || 90),
-      size: NativeRuntime.number(raw.size || 100), visible: raw.visible !== false,
+      x: NativeRuntime.number(raw.x), y: NativeRuntime.number(raw.y), direction: NativeRuntime.number(raw.direction == null ? 90 : raw.direction),
+      size: NativeRuntime.number(raw.size == null ? 100 : raw.size), visible: raw.visible !== false,
       draggable: !!raw.draggable, rotationStyle: raw.rotationStyle || 'all around',
       currentCostume: NativeRuntime.number(raw.currentCostume), costumes: raw.costumes || [], sounds: raw.sounds || [],
       volume: NativeRuntime.number(raw.volume ?? 100), layerOrder: NativeRuntime.number(raw.layerOrder ?? index),
@@ -233,6 +233,16 @@ export class NativeRuntime {
       case 'logic_null': return null;
       case 'colour_picker': return this.field(block, 'COLOUR', '#000000');
       case 'sound_sounds_menu': return this.field(block,'SOUND_MENU','');
+      case 'motion_goto_menu': return this.field(block,'TO','');
+      case 'motion_pointtowards_menu': return this.field(block,'TOWARDS','');
+      case 'looks_costume': return this.field(block,'COSTUME','');
+      case 'looks_backdrops': return this.field(block,'BACKDROP','');
+      case 'event_broadcast_menu': return this.field(block,'BROADCAST_OPTION','');
+      case 'control_create_clone_of_menu': return this.field(block,'CLONE_OPTION','');
+      case 'sensing_keyoptions': return this.field(block,'KEY_OPTION','');
+      case 'sensing_touchingobjectmenu': return this.field(block,'TOUCHINGOBJECTMENU','');
+      case 'sensing_distancetomenu': return this.field(block,'DISTANCETOMENU','');
+      case 'sensing_of_object_menu': return this.field(block,'OBJECT','');
       case 'sound_volume': return target.volume;
       case 'data_variable': return this.getVariable(target, this.fieldId(block, 'VARIABLE')).value;
       case 'data_listcontents': return this.getList(target, this.fieldId(block, 'LIST')).value.join(' ');
@@ -278,7 +288,7 @@ export class NativeRuntime {
         const str = Array.from(NativeRuntime.text(await a('STRING'))), index = Math.floor(NativeRuntime.number(await a('LETTER'))) - 1;
         return str[index] || '';
       }
-      case 'operator_of': {
+      case 'operator_of': case 'sensing_of': {
         const property = this.field(block, 'PROPERTY').toLowerCase().replace(/[\\s_]/g,'');
         const object = NativeRuntime.text(await a('OBJECT'));
         const other = this.targets.find(item => item.name === object);
@@ -297,6 +307,7 @@ export class NativeRuntime {
       case 'motion_direction': return target.direction;
       case 'looks_size': return target.size;
       case 'looks_costumenumbername': return this.field(block,'NUMBER_NAME')==='name' ? (target.costumes[target.currentCostume]?.name || '') : target.currentCostume+1;
+      case 'looks_backdropnumbername': return this.field(block,'NUMBER_NAME')==='name' ? (this.stage.costumes[this.stage.currentCostume]?.name || '') : this.stage.currentCostume+1;
       case 'sensing_mousex': return this.mouse.x;
       case 'sensing_mousey': return this.mouse.y;
       case 'sensing_mousedown': return this.mouse.down;
@@ -390,6 +401,7 @@ export class NativeRuntime {
         target.direction=Math.atan2(dx,dy)*180/Math.PI;
         break;
       }
+      case 'motion_setrotationstyle': target.rotationStyle=this.field(block,'STYLE','all around'); break;
       case 'looks_show': target.visible=true; break;
       case 'looks_hide': target.visible=false; break;
       case 'looks_setsizeto': target.size=await n('SIZE'); break;
