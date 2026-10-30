@@ -35,7 +35,9 @@ export class NativeRuntime {
   static keyName(value) {
     const key = NativeRuntime.text(value).toLowerCase();
     return ({' ':'space','arrowup':'up','arrowdown':'down','arrowleft':'left','arrowright':'right','enter':'enter','escape':'escape'})[key] || key;
-  }  constructor(project, host = {}) {
+  }
+
+  constructor(project, host = {}) {
     if (!project || !Array.isArray(project.targets)) throw new Error('Invalid SB3 project: targets missing');
     this.project = project;
     this.host = host;
