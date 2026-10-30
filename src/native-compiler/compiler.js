@@ -149,7 +149,7 @@ export const compileNativeProject = (project) => {
       if (!block || block.shadow || block.topLevel !== true) continue;
       let trigger = null;
       if (block.opcode === 'event_whenflagclicked') trigger = {type:'flag'};
-      if (block.opcode === 'event_whenkeypressed') trigger = {type:'key', key:getField(block,'KEY_OPTION').toLowerCase()};
+      if (block.opcode === 'event_whenkeypressed') trigger = {type:'key', key:getField(block,'KEY_OPTION').toLowerCase().replace(' arrow','').replace('up arrow','up').replace('down arrow','down').replace('left arrow','left').replace('right arrow','right')};
       if (block.opcode === 'event_whenthisspriteclicked') trigger = {type:'click'};
       if (block.opcode === 'event_whenstageclicked') trigger = {type:'stage-click'};
       if (block.opcode === 'event_whenbroadcastreceived') trigger = {type:'broadcast', name:getField(block,'BROADCAST_OPTION')};
