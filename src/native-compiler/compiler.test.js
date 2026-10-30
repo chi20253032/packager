@@ -39,6 +39,24 @@ describe('native Scratch compiler', () => {
     expect(result.unsupportedOpcodes).toContain('motion_glidesecstoxy');
   });
 
+  test('emits syntactically valid async JavaScript for nested control flow', () => {
+    const project = {
+      targets: [{
+        name: 'Sprite1',
+        blocks: {
+          flag: block('event_whenflagclicked', 'repeat', {}, {}, true),
+          repeat: block('control_repeat', null, {
+            TIMES: [1, [4, '3']],
+            SUBSTACK: [2, 'move']
+          }),
+          move: block('motion_movesteps', null, {STEPS: [1, [4, '10']]})
+        }
+      }]
+    };
+    const result = compileNativeProject(project);
+    expect(() => new Function('api', 'input', 'return (async()=>{' + result.sprites[0].scripts[0].code + '})()')).not.toThrow();
+  });
+
   test('rejects malformed project data', () => {
     expect(() => compileNativeProject({})).toThrow('targets are missing');
   });
