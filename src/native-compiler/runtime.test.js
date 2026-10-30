@@ -30,7 +30,7 @@ describe('native runtime v2',()=>{
     const runtime=new NativeRuntime(project);
     runtime.start();
     await new Promise(resolve=>setTimeout(resolve,10));
-    expect(runtime.sprites[0].lists['list-id'].value).toHaveLength(3);
+    expect(runtime.sprites[0].lists['items'].value).toHaveLength(3);
     expect(runtime.sprites[0].variables['score-id']?.value ?? runtime.sprites[0].variables.score.value).toBe(3);
     runtime.stopAll();
   });
