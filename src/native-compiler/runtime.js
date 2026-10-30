@@ -37,6 +37,13 @@ export class NativeRuntime {
     this.threads = new Set();
     this.clones = [];
     this.targets = project.targets.map((raw, index) => this.makeTarget(raw, index));
+    this.originalTargets = this.targets.slice();
+    this.initialState = new Map(this.originalTargets.map(target => [target, {
+      x:target.x, y:target.y, direction:target.direction, size:target.size, visible:target.visible,
+      currentCostume:target.currentCostume, volume:target.volume, layerOrder:target.layerOrder,
+      variables:Object.fromEntries(Object.entries(target.variables).map(([id, item]) => [id, item.value])),
+      lists:Object.fromEntries(Object.entries(target.lists).map(([id, item]) => [id, item.value.slice()]))
+    }]));
     this.stage = this.targets.find(target => target.isStage) || this.targets[0];
     this.sprites = this.targets.filter(target => !target.isStage);
     this.originalSprites = this.sprites.slice();
@@ -65,9 +72,20 @@ export class NativeRuntime {
 
   start() {
     this.stopAll();
+    this.targets = this.originalTargets.slice();
+    this.clones = [];
+    this.stage = this.targets.find(target => target.isStage) || this.targets[0];
+    this.sprites = this.targets.filter(target => !target.isStage);
+    this.globalVariables = this.stage ? this.stage.variables : Object.create(null);
+    this.globalLists = this.stage ? this.stage.lists : Object.create(null);
+    for (const target of this.originalTargets) {
+      const initial = this.initialState.get(target);
+      Object.assign(target, {x:initial.x,y:initial.y,direction:initial.direction,size:initial.size,visible:initial.visible,currentCostume:initial.currentCostume,volume:initial.volume,layerOrder:initial.layerOrder,alive:true,bubble:null,effects:{}});
+      for (const [id, value] of Object.entries(initial.variables)) target.variables[id].value = value;
+      for (const [id, value] of Object.entries(initial.lists)) target.lists[id].value = value.slice();
+    }
     this.running = true;
     this.startedAt = performance.now();
-    this.targets.forEach(target => { target.alive = true; });
     this.runHat('event_whenflagclicked');
     this.host.onStart?.();
   }
@@ -230,6 +248,14 @@ export class NativeRuntime {
         if (!other) return 0;
         return ({xposition:other.x, yposition:other.y, direction:other.direction, costume:other.currentCostume + 1, size:other.size, volume:other.volume})[property] ?? 0;
       }
+      case 'sensing_resettimer': this.startedAt=performance.now(); return 0;
+      case 'sensing_touchingobject': {
+        const who=text(await a('TOUCHINGOBJECTMENU'));
+        if(who==='_mouse_') return this.host.hitTest ? this.host.hitTest(target,this.mouse.x,this.mouse.y) : false;
+        if(who==='_edge_') return target.x < -230 || target.x > 230 || target.y < -170 || target.y > 170;
+        const other=this.targets.find(item=>item.name===who);
+        return !!other && other!==target && Math.hypot(target.x-other.x,target.y-other.y)<42;
+      }
       case 'sensing_mousex': return this.mouse.x;
       case 'sensing_mousey': return this.mouse.y;
       case 'sensing_mousedown': return this.mouse.down;
@@ -288,6 +314,7 @@ export class NativeRuntime {
         const dest = text(await v('TO'));
         const other = this.targets.find(item => item.name === dest);
         if (dest === '_mouse_') { target.x=this.mouse.x; target.y=this.mouse.y; }
+        else if (dest === '_random_') { target.x=Math.random()*480-240; target.y=Math.random()*360-180; }
         else if (other) { target.x=other.x; target.y=other.y; }
         break;
       }
@@ -320,6 +347,13 @@ export class NativeRuntime {
       case 'looks_setsizeto': target.size=await n('SIZE'); break;
       case 'looks_changesizeby': target.size+=await n('CHANGE'); break;
       case 'looks_nextcostume': target.currentCostume=(target.currentCostume+1)%Math.max(1,target.costumes.length); break;
+      case 'looks_switchbackdropto': case 'looks_switchbackdroptoandwait': {
+        if (target.isStage) { const name=text(await v('BACKDROP')); const index=target.costumes.findIndex(costume=>costume.name===name); if(index>=0)target.currentCostume=index; }
+        if(block.opcode.endsWith('andwait')) await this.broadcast('backdrop');
+        break;
+      }
+      case 'looks_nextbackdrop': if(target.isStage)target.currentCostume=(target.currentCostume+1)%Math.max(1,target.costumes.length); break;
+      case 'looks_gotofrontback': target.layerOrder= this.field(block,'FRONT_BACK')==='front'?Math.max(...this.targets.map(t=>t.layerOrder))+1:Math.min(...this.targets.map(t=>t.layerOrder))-1; break;
       case 'looks_switchcostumeto': {
         const name=text(await v('COSTUME')), index=target.costumes.findIndex(c=>c.name===name);
         if (index>=0) target.currentCostume=index;
@@ -338,7 +372,6 @@ export class NativeRuntime {
         const effect=this.field(block,'EFFECT'); target.effects[effect]=number(target.effects[effect])+await n('CHANGE'); break;
       }
       case 'looks_seteffectto': target.effects[this.field(block,'EFFECT')]=await n('VALUE'); break;
-      case 'looks_gotofrontback': target.layerOrder= this.field(block,'FRONT_BACK')==='front'?Math.max(...this.targets.map(t=>t.layerOrder))+1:Math.min(...this.targets.map(t=>t.layerOrder))-1; break;
       case 'looks_goforwardbackwardlayers': target.layerOrder += (this.field(block,'FORWARD_BACKWARD')==='forward'?1:-1)*await n('NUM'); break;
       case 'sound_setvolume': target.volume=await n('VOLUME'); break;
       case 'sound_changevolume': target.volume+=await n('VOLUME'); break;
