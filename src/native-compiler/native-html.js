@@ -15,6 +15,7 @@ export const createNativeHTML = (project, title = 'Scratch project') => {
   const canvas = document.querySelector('canvas');
   const ctx = canvas.getContext('2d');
   const input = {mouseX:0,mouseY:0,mouseDown:false,keys:new Set()};
+  const normalizeKey = key => ({' ':'space','arrowup':'up','arrowdown':'down','arrowleft':'left','arrowright':'right'}[String(key).toLowerCase()] || String(key).toLowerCase());
   const sprites = project.sprites.filter(s => !s.isStage).map((s,i) => ({
     ...s, x:s.x, y:s.y, direction:s.direction, visible:s.visible, bubble:'', bubbleUntil:0, running:true, id:i, variables:{...(s.variables||{})},
     images:(s.costumes || []).map(costume => {
@@ -81,8 +82,8 @@ export const createNativeHTML = (project, title = 'Scratch project') => {
   canvas.addEventListener('pointermove',e=>{const r=canvas.getBoundingClientRect();input.mouseX=(e.clientX-r.left-r.width/2)*480/r.width;input.mouseY=-(e.clientY-r.top-r.height/2)*360/r.height;});
   canvas.addEventListener('pointerdown',()=>{input.mouseDown=true;runTrigger('stage-click');sprites.forEach(s=>{const dx=input.mouseX-s.x,dy=input.mouseY-s.y;if(Math.hypot(dx,dy)<28)s.scripts.filter(x=>x.trigger.type==='click').forEach(x=>launch(s,x));});});
   addEventListener('pointerup',()=>input.mouseDown=false);
-  addEventListener('keydown',e=>{const key=e.key.toLowerCase();input.keys.add(key);(stage.scripts||[]).filter(x=>x.trigger.type==='key'&&x.trigger.key===key).forEach(x=>launch(stage,x));sprites.forEach(s=>s.scripts.filter(x=>x.trigger.type==='key'&&x.trigger.key===key).forEach(x=>launch(s,x)));});
-  addEventListener('keyup',e=>input.keys.delete(e.key.toLowerCase()));
+  addEventListener('keydown',e=>{const key=normalizeKey(e.key);input.keys.add(key);(stage.scripts||[]).filter(x=>x.trigger.type==='key'&&x.trigger.key===key).forEach(x=>launch(stage,x));sprites.forEach(s=>s.scripts.filter(x=>x.trigger.type==='key'&&x.trigger.key===key).forEach(x=>launch(s,x)));});
+  addEventListener('keyup',e=>input.keys.delete(normalizeKey(e.key)));
   document.querySelector('#flag').addEventListener('click',()=>{sprites.forEach(s=>{s.x=Number(s.x)||0;s.y=Number(s.y)||0;s.running=true;});runTrigger('flag');});
   const draw = () => {
     const w=innerWidth,h=innerHeight;ctx.clearRect(0,0,w,h);ctx.fillStyle='#171923';ctx.fillRect(0,0,w,h);
