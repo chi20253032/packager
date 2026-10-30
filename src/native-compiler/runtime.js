@@ -551,4 +551,4 @@ export class NativeRuntime {
 export const getNativeRuntimeSource = () => [
   'const NativeRuntime = ' + NativeRuntime.toString() + ';',
   'const NATIVE_RUNTIME_SUPPORTED = new Set(' + JSON.stringify([...NATIVE_RUNTIME_SUPPORTED]) + ');'
-].join('\\n');
+].join('\n');
