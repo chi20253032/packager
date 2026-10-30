@@ -95,6 +95,21 @@ describe('native runtime v2',()=>{
     runtime.stopAll();
   });
 
+  test('executes registered native extension adapters',async()=>{
+    const project=makeProject({
+      flag:makeBlock('event_whenflagclicked','custom',{}, {},true),
+      custom:makeBlock('extension_native_set_score')
+    });
+    const runtime=new NativeRuntime(project);
+    runtime.registerExtension('extension_native_set_score',{
+      command:({runtime,target})=>runtime.setVariable(target,'score',42)
+    });
+    runtime.start();
+    await new Promise(resolve=>setTimeout(resolve,5));
+    expect(runtime.sprites[0].variables.score.value).toBe(42);
+    runtime.stopAll();
+  });
+
   test('reports unsupported extension opcodes to host instead of silently pretending',async()=>{
     const unsupported=[];
     const project=makeProject({flag:makeBlock('event_whenflagclicked','custom',{}, {},true),custom:makeBlock('extension_example_custom')});
