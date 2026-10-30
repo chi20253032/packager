@@ -12,6 +12,7 @@ import {OutdatedPackagerError} from '../common/errors';
 import {darken} from './colors';
 import {Adapter} from './adapter';
 import encodeBigString from './encode-big-string';
+import {createNativeHTML} from '../native-compiler/native-html';
 
 const PROGRESS_LOADED_SCRIPTS = 0.1;
 
@@ -1260,6 +1261,15 @@ cd "$(dirname "$0")"
     }
     this.used = true;
     this.ensureNotAborted();
+    if (this.options.target === 'native-html') {
+      const html = createNativeHTML(this.project, this.options.app.windowTitle);
+      this.ensureNotAborted();
+      return {
+        data: html,
+        type: 'text/html',
+        filename: this.generateFilename('native.html')
+      };
+    }
     await this.loadResources();
     this.ensureNotAborted();
     const html = encodeBigString`<!DOCTYPE html>
