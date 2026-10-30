@@ -137,7 +137,10 @@ if (fs.existsSync(faviconPath)) {
 
 // Inspect actual opening tags only. Bundle source can contain HTML-like strings
 // such as "<script src=..." which must not be mistaken for document tags.
-const openingTags = html.match(/<(?:script|link)\b[^>]*>/gi) || [];
+// Ignore inline script bodies while inspecting document markup. JavaScript bundles
+// can legitimately contain strings that look like HTML tags.
+const markupOnly = html.replace(/(<script\b[^>]*>)[\s\S]*?(<\/script\s*>)/gi, '$1$2');
+const openingTags = markupOnly.match(/<(?:script|link)\b[^>]*>/gi) || [];
 const externalScriptTags = openingTags.filter(tag => /^<script\b/i.test(tag) && /\bsrc\s*=/i.test(tag));
 const externalStylesheetLinks = openingTags.filter(tag =>
   /^<link\b/i.test(tag) &&
