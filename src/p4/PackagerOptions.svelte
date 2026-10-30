@@ -85,6 +85,7 @@
 
   const otherEnvironmentsInitiallyOpen = ![
     'html',
+    'native-html',
     'zip',
     'electron-win32',
     'webview-mac',
@@ -788,6 +789,10 @@
         {$_('options.html')}
       </label>
       <label class="option">
+        <input type="radio" name="environment" bind:group={$options.target} value="native-html">
+        Native HTML (experimental, no Scratch Player)
+      </label>
+      <label class="option">
         <input type="radio" name="environment" bind:group={$options.target} value="zip">
         {$_('options.zip')}
       </label>
@@ -862,7 +867,7 @@
   </div>
 </Section>
 
-{#if $options.target !== 'html'}
+{#if $options.target !== 'html' && $options.target !== 'native-html'}
   <div in:fade|local>
     <Section
       accent="#FF661A"
