@@ -154,7 +154,7 @@ const makeWebsite = () => ({
   module: {
     rules: [
       {
-        test: /\\.js$/,
+        test: /\.js$/,
         include: [path.resolve(__dirname, 'src', 'native-compiler')],
         loader: 'babel-loader',
         options: {
