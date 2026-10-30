@@ -127,7 +127,6 @@ export const compileNativeProject = (project) => {
       if (block.opcode === 'event_whenthisspriteclicked') trigger = {type:'click'};
       if (block.opcode === 'event_whenstageclicked') trigger = {type:'stage-click'};
       if (block.opcode === 'event_whenbroadcastreceived') trigger = {type:'broadcast', name:getField(block,'BROADCAST_OPTION')};
-      if (block.opcode === 'event_whenbroadcastreceived') trigger = {type:'broadcast', name:getField(block,'BROADCAST_OPTION')};
       if (!trigger) {
         if (block.opcode.startsWith('event_')) diagnostics.add(block.opcode);
         continue;
