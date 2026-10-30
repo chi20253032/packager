@@ -28,7 +28,14 @@ const getInputValue = (blocks, block, name, fallback = 0, diagnostics = null) =>
   const child = getInputBlock(blocks, block, name);
   if (child) return compileExpression(blocks, child, 0, diagnostics);
   const input = block.inputs && block.inputs[name];
-  if (input && Array.isArray(input[1]) && input[1][1] !== undefined) return jsonForScript(input[1][1]);
+  if (input && Array.isArray(input[1]) && input[1][1] !== undefined) {
+    const shadow = input[1];
+    if (shadow[0] === 4 || shadow[0] === 5) {
+      const numeric = Number(shadow[1]);
+      return Number.isFinite(numeric) ? String(numeric) : '0';
+    }
+    return jsonForScript(shadow[1]);
+  }
   return jsonForScript(fallback);
 };
 
@@ -36,9 +43,11 @@ const compileExpression = (blocks, block, depth = 0, diagnostics = null) => {
   if (!block || depth > 64) return '0';
   const next = (name) => compileExpression(blocks, getInputBlock(blocks, block, name), depth + 1, diagnostics);
   switch (block.opcode) {
-    case 'math_number':
-    case 'text':
-      return jsonForScript(getField(block, 'NUM', getField(block, 'TEXT', '0')));
+    case 'math_number': {
+      const numeric = Number(getField(block, 'NUM', '0'));
+      return Number.isFinite(numeric) ? String(numeric) : '0';
+    }
+    case 'text': return jsonForScript(getField(block, 'TEXT', ''));
     case 'math_positive': return `(+(${next('NUM')}))`;
     case 'math_negative': return `(-(${next('NUM')}))`;
     case 'math_add': return `((+(${next('NUM1')}))+(+(${next('NUM2')})))`;
