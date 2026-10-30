@@ -79,7 +79,9 @@ Set the environment variable `ENABLE_SERVICE_WORKER` to `1` to enable service wo
 
 ## Standalone builds
 
-The packager supports generating "standalone builds" that are single HTML files containing the entire packager. Large files such as Electron binaries will still be downloaded from a remote server as needed. You can download prebuilt standalone builds from [our GitHub releases](https://github.com/TurboWarp/packager/releases). These can be useful if our website is blocked or you don't have a reliable internet connection. Note that standalone builds do not contain an update checker, so do check on your own occasionally.
+The packager supports generating "standalone builds" that are single HTML files containing the entire packager. The generated file inlines the Packager JavaScript, scaffolding bundles, stylesheets, and favicon; the standalone build also includes a responsive layout for phones and tablets (including touch-sized controls and safe-area spacing). You can open the HTML file directly in a modern browser and load a local SB, SB2, or SB3 project.
+
+Large files such as Electron binaries will still be downloaded from a remote server when you choose a native desktop target. Loading projects by Scratch ID, downloading extensions, and other network-backed features also require an internet connection. Local project import and HTML packaging are the intended offline-friendly workflow. You can download prebuilt standalone builds from [our GitHub releases](https://github.com/TurboWarp/packager/releases). These can be useful if our website is blocked or you don't have a reliable internet connection. Note that standalone builds do not contain an update checker, so do check on your own occasionally.
 
 To make a production standalone build locally:
 
