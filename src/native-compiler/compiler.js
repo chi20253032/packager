@@ -52,10 +52,30 @@ const compileExpression = (blocks, block, depth = 0, diagnostics = null) => {
     case 'operator_or': return `(!!(${next('OPERAND1')})||!!(${next('OPERAND2')}))`;
     case 'operator_not': return `(!(${next('OPERAND')}))`;
     case 'operator_join': return `(String(${next('STRING1')})+String(${next('STRING2')}))`;
+    case 'operator_mod': return `((+(${next('NUM1')})%+( ${next('NUM2')})))`;
+    case 'operator_round': return `Math.round(+(${next('NUM')}))`;
+    case 'operator_length': return `String(${next('STRING')}).length`;
+    case 'operator_contains': return `String(${next('STRING1')}).toLowerCase().includes(String(${next('STRING2')}).toLowerCase())`;
+    case 'operator_letter_of': return `String(${next('LETTER')})[Math.max(0,(+(${next('LETTER')}))-1)]||''`;
+    case 'operator_mathop': {
+      const op = getField(block, 'OPERATOR');
+      const operations = {
+        abs: 'Math.abs', floor: 'Math.floor', ceiling: 'Math.ceil', sqrt: 'Math.sqrt',
+        sin: 'Math.sin', cos: 'Math.cos', tan: 'Math.tan', asin: 'Math.asin',
+        acos: 'Math.acos', atan: 'Math.atan', ln: 'Math.log', 'log': 'Math.log10',
+        'e ^': 'Math.exp', '10 ^': '(n=>Math.pow(10,n))'
+      };
+      if (operations[op]) return `${operations[op]}(+(${next('NUM')}))`;
+      diagnostics && diagnostics.add(block.opcode);
+      return '0';
+    }
     case 'operator_random': return `(Math.floor(Math.random()*(Math.max(+(${next('FROM')}),+(${next('TO')}))-Math.min(+(${next('FROM')}),+(${next('TO')}))+1))+Math.min(+(${next('FROM')}),+(${next('TO')})))`;
     case 'sensing_mousex': return 'input.mouseX';
     case 'sensing_mousey': return 'input.mouseY';
     case 'sensing_mousedown': return 'input.mouseDown';
+    case 'motion_xposition': return 'api.sprite.x';
+    case 'motion_yposition': return 'api.sprite.y';
+    case 'motion_direction': return 'api.direction';
     case 'sensing_keypressed': return `input.keys.has(String(${next('KEY_OPTION')}).toLowerCase())`;
     case 'data_variable': return `api.getVar(${jsonForScript(getField(block, 'VARIABLE'))})`;
     default:
@@ -165,12 +185,12 @@ export const compileNativeProject = (project) => {
 export const NATIVE_COMPILER_SUPPORTED = [
   'event_whenflagclicked','event_whenkeypressed','event_whenthisspriteclicked','event_whenstageclicked',
   'event_whenbroadcastreceived','event_broadcast','event_broadcastandwait',
-  'motion_movesteps','motion_turnright','motion_turnleft','motion_gotoxy','motion_setx','motion_sety',
+  'motion_movesteps','motion_turnright','motion_turnleft','motion_gotoxy','motion_glidesecstoxy','motion_ifonedgebounce','motion_xposition','motion_yposition','motion_direction','motion_setx','motion_sety',
   'motion_changexby','motion_changeyby','motion_pointindirection',
-  'looks_show','looks_hide','looks_nextcostume','looks_switchcostumeto','looks_say','looks_sayforsecs',
+  'looks_show','looks_hide','looks_setsizeto','looks_changesizeby','looks_nextcostume','looks_switchcostumeto','looks_say','looks_sayforsecs',
   'data_variable','data_setvariableto','data_changevariableby',
   'control_wait','control_repeat','control_forever','control_if','control_if_else','control_stop',
   'math_number','text','math_positive','math_negative','math_add','math_subtract','math_multiply','math_divide',
   'operator_equals','operator_gt','operator_lt','operator_and','operator_or','operator_not','operator_join',
-  'operator_random','sensing_mousex','sensing_mousey','sensing_mousedown','sensing_keypressed'
+  'operator_random','operator_mod','operator_round','operator_length','operator_contains','operator_letter_of','operator_mathop','sensing_mousex','sensing_mousey','sensing_mousedown','sensing_keypressed'
 ];
