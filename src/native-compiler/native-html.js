@@ -14,10 +14,10 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
     throw new Error('Invalid SB3 project: targets are missing.');
   }
   const nativeOptions = {
-    turbo: !!options.turbo, framerate: options.framerate ?? 30,
-    maxClones: options.maxClones === Infinity ? null : (options.maxClones ?? 300),
+    turbo: !!options.turbo, framerate: options.framerate == null ? 30 : options.framerate,
+    maxClones: options.maxClones === Infinity ? null : (options.maxClones == null ? 300 : options.maxClones),
     fencing: options.fencing !== false, miscLimits: options.miscLimits !== false,
-    stageWidth: options.stageWidth ?? 480, stageHeight: options.stageHeight ?? 360,
+    stageWidth: options.stageWidth == null ? 480 : options.stageWidth, stageHeight: options.stageHeight == null ? 360 : options.stageHeight,
     resizeMode: options.resizeMode || 'preserve-ratio', username: options.username || 'player####',
     autoplay: !!options.autoplay, appearance: options.appearance || {},
     custom: options.custom || {}
@@ -106,7 +106,7 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
       await audio.resume();
       const source = audio.createBufferSource();
       const gain = audio.createGain();
-      gain.gain.value = Math.max(0, Math.min(1, (target.volume ?? 100) / 100));
+      gain.gain.value = Math.max(0, Math.min(1, (target.volume == null ? 100 : target.volume) / 100));
       source.buffer = buffer;
       source.connect(gain);
       gain.connect(audio.destination);
@@ -297,7 +297,7 @@ main{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;
 #stage{width:100%;height:100%;max-width:100%;max-height:100%;aspect-ratio:4/3;object-fit:contain;background:#202536;border-radius:12px;touch-action:none;box-shadow:0 16px 50px #0005}
 #warning{position:fixed;left:10px;right:10px;bottom:max(10px,env(safe-area-inset-bottom));max-height:30vh;overflow:auto;padding:12px 14px;border:1px solid #d69a43;border-radius:12px;background:#3d2c19;color:#ffe1b1;line-height:1.5;white-space:pre-wrap}
 [hidden]{display:none!important}
-${options.custom && options.custom.css ? options.custom.css.replaceAll('</style', '<\\/style') : ''}
+${options.custom && options.custom.css ? options.custom.css.split('</style').join('<\\/style') : ''}
 @media(max-width:520px){header{height:54px;flex-basis:54px;padding:6px 8px;gap:6px}.brand{display:none}button{padding:8px 11px;min-height:42px}main{padding:4px}#stage{border-radius:8px}}
 </style>
 </head>
