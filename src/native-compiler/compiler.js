@@ -102,7 +102,11 @@ const compileStack = (blocks, firstId, diagnostics, depth = 0) => {
     visited.add(id);
     const block = blocks[id];
     const value = (name, fallback = 0) => getInputValue(blocks, block, name, fallback, diagnostics);
-    const substack = (name) => compileStack(blocks, getInputBlock(blocks, block, name)?.id, diagnostics, depth + 1);
+    const substack = (name) => {
+      const input = block.inputs && block.inputs[name];
+      const candidate = input && (input[1] || input[2]);
+      return compileStack(blocks, typeof candidate === 'string' ? candidate : null, diagnostics, depth + 1);
+    };
     switch (block.opcode) {
       case 'motion_movesteps': output += `await api.move(${value('STEPS')},0);\n`; break;
       case 'motion_turnright': output += `api.turn(${value('DEGREES')});\n`; break;
