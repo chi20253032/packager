@@ -67,6 +67,20 @@ describe('native runtime v2',()=>{
     runtime.stopAll();
   });
 
+  test('draws Pen extension trails when sprites move with the pen down',async()=>{
+    const lines=[];
+    const project=makeProject({
+      flag:makeBlock('event_whenflagclicked','down',{}, {},true),
+      down:makeBlock('pen_penDown','move'),
+      move:makeBlock('motion_changexby',null,{DX:[1,[4,'10']]})
+    });
+    const runtime=new NativeRuntime(project,{penLine:(_target,x1,y1,x2,y2)=>lines.push([x1,y1,x2,y2])});
+    runtime.start();
+    await new Promise(resolve=>setTimeout(resolve,5));
+    expect(lines).toContainEqual([0,0,10,0]);
+    runtime.stopAll();
+  });
+
   test('routes native sound blocks to the Web Audio host adapter',async()=>{
     const played=[];
     const project=makeProject({
