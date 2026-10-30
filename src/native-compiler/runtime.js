@@ -206,14 +206,16 @@ export class NativeRuntime {
       case 'logic_boolean': return this.field(block, 'BOOL') === 'TRUE';
       case 'logic_null': return null;
       case 'colour_picker': return this.field(block, 'COLOUR', '#000000');
-      case 'data_variable': return this.getVariable(target, this.field(block, 'VARIABLE', '')).value;
-      case 'data_listcontents': return this.getList(target, this.field(block, 'LIST', '')).value.join(' ');
-      case 'data_listindexall': return this.getList(target, this.field(block, 'LIST', '')).value.length;
-      case 'operator_add': return number(await a('NUM1')) + number(await a('NUM2'));
-      case 'math_add': return number(await a('NUM1')) + number(await a('NUM2'));
-      case 'math_subtract': return number(await a('NUM1')) - number(await a('NUM2'));
-      case 'math_multiply': return number(await a('NUM1')) * number(await a('NUM2'));
-      case 'math_divide': return number(await a('NUM1')) / number(await a('NUM2'));
+      case 'data_variable': return this.getVariable(target, this.fieldId(block, 'VARIABLE')).value;
+      case 'data_listcontents': return this.getList(target, this.fieldId(block, 'LIST')).value.join(' ');
+      case 'data_lengthoflist': return this.getList(target, this.fieldId(block, 'LIST')).value.length;
+      case 'data_itemoflist': { const list=this.getList(target,this.fieldId(block,'LIST')).value,index=this.listIndex(await a('INDEX'),list.length); return index<0?'':list[index]; }
+      case 'data_itemnumoflist': { const list=this.getList(target,this.fieldId(block,'LIST')).value,item=text(await a('ITEM')); return list.findIndex(value=>text(value)===item)+1; }
+      case 'data_listcontainsitem': { const list=this.getList(target,this.fieldId(block,'LIST')).value,item=text(await a('ITEM')).toLowerCase(); return list.some(value=>text(value).toLowerCase()===item); }
+      case 'operator_add': case 'math_add': return number(await a('NUM1')) + number(await a('NUM2'));
+      case 'operator_subtract': case 'math_subtract': return number(await a('NUM1')) - number(await a('NUM2'));
+      case 'operator_multiply': case 'math_multiply': return number(await a('NUM1')) * number(await a('NUM2'));
+      case 'operator_divide': case 'math_divide': return number(await a('NUM1')) / number(await a('NUM2'));
       case 'math_modulo': case 'operator_mod': {
         const x = number(await a('NUM1')), y = number(await a('NUM2'));
         return y === 0 ? 0 : ((x % y) + y) % y;
@@ -405,6 +407,7 @@ export class NativeRuntime {
       case 'sound_setvolume': target.volume=await n('VOLUME'); break;
       case 'sound_changevolume': target.volume+=await n('VOLUME'); break;
       case 'sound_stopallsounds': this.host.stopAllSounds?.(); break;
+      case 'sensing_resettimer': this.startedAt=performance.now(); break;
       case 'sensing_resettimer': this.startedAt=performance.now(); break;
       case 'sensing_askandwait': this.answer = await (this.host.ask ? this.host.ask(text(await v('QUESTION'))) : (typeof prompt === 'function' ? prompt(text(await v('QUESTION'))) : '')); break;
       case 'data_setvariableto': this.setVariable(target,this.fieldId(block,'VARIABLE'),await v('VALUE')); break;
