@@ -120,9 +120,13 @@ html = html.replace(/<link\b([^>]*)>/gi, (match, attributes) => {
   return '<style>\n' + css.replace(/<\/style/gi, '<\\/style') + '\n</style>';
 });
 
-html = html.replace(/<head([^>]*)>/i, (head) => (
-  head + '\n<style id="p4-standalone-mobile">' + mobileCSS + '</style>\n' + inlineScaffolding
-));
+html = html.replace(/<\/head>/i, '<style id="p4-standalone-mobile">' + mobileCSS + '</style>\n</head>');
+
+const firstBundleTag = html.search(/<script\b[^>]*\bsrc\s*=/i);
+if (firstBundleTag < 0) {
+  throw new Error('Cannot locate the first JavaScript bundle tag.');
+}
+html = html.slice(0, firstBundleTag) + inlineScaffolding + '\n' + html.slice(firstBundleTag);
 
 const faviconPath = pathUtil.join(__dirname, '../../static/favicon.ico');
 if (fs.existsSync(faviconPath)) {
