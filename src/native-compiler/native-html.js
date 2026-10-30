@@ -131,7 +131,8 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
     const image = imageFor(costume);
     context.save();
     context.translate(target.x, -target.y);
-    context.rotate(((target.direction || 90) - 90) * Math.PI / 180);
+    if (target.rotationStyle === 'all around') context.rotate(((target.direction == null ? 90 : target.direction) - 90) * Math.PI / 180);
+    else if (target.rotationStyle === 'left-right' && target.direction < 0) context.scale(-1, 1);
     context.scale((target.size || 100) / 100, (target.size || 100) / 100);
     if (image && image.complete && image.naturalWidth) {
       const cx = Number.isFinite(costume.rotationCenterX) ? costume.rotationCenterX : image.naturalWidth / 2;
