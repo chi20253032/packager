@@ -44,6 +44,8 @@ export const createNativeHTML = (project, title = 'Scratch project') => {
   const apiFor = sprite => ({
     sprite, get direction(){return sprite.direction;}, set direction(v){sprite.direction=v;},
     get running(){return running && sprite.running;},
+    stopAll(){running=false;},
+    stopSprite(){sprite.running=false;},
     setX(x){sprite.x=Number(x)||0;}, setY(y){sprite.y=Number(y)||0;},
     goto(x,y){sprite.x=Number(x)||0;sprite.y=Number(y)||0;},
     turn(d){sprite.direction=(sprite.direction+(Number(d)||0))%360;},
@@ -77,6 +79,7 @@ export const createNativeHTML = (project, title = 'Scratch project') => {
     catch(error){console.error('Native script error:',error);return Promise.resolve();}
   };
   const runTrigger = type => { (stage.scripts || []).filter(s=>s.trigger.type===type).forEach(s=>launch(stage,s)); sprites.forEach(sprite => sprite.scripts.filter(s=>s.trigger.type===type).forEach(s=>launch(sprite,s))); };
+  const spriteReset = () => sprites.forEach(sprite=>{sprite.running=true;});
   const resize = () => {const dpr=Math.min(devicePixelRatio||1,2);canvas.width=Math.round(innerWidth*dpr);canvas.height=Math.round(innerHeight*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);};
   addEventListener('resize',resize);resize();
   canvas.addEventListener('pointermove',e=>{const r=canvas.getBoundingClientRect();input.mouseX=(e.clientX-r.left-r.width/2)*480/r.width;input.mouseY=-(e.clientY-r.top-r.height/2)*360/r.height;});
@@ -84,7 +87,7 @@ export const createNativeHTML = (project, title = 'Scratch project') => {
   addEventListener('pointerup',()=>input.mouseDown=false);
   addEventListener('keydown',e=>{const key=normalizeKey(e.key);input.keys.add(key);(stage.scripts||[]).filter(x=>x.trigger.type==='key'&&x.trigger.key===key).forEach(x=>launch(stage,x));sprites.forEach(s=>s.scripts.filter(x=>x.trigger.type==='key'&&x.trigger.key===key).forEach(x=>launch(s,x)));});
   addEventListener('keyup',e=>input.keys.delete(normalizeKey(e.key)));
-  document.querySelector('#flag').addEventListener('click',()=>{sprites.forEach(s=>{s.x=Number(s.x)||0;s.y=Number(s.y)||0;s.running=true;});runTrigger('flag');});
+  document.querySelector('#flag').addEventListener('click',()=>{running=true;spriteReset();runTrigger('flag');});
   const draw = () => {
     const w=innerWidth,h=innerHeight;ctx.clearRect(0,0,w,h);ctx.fillStyle='#171923';ctx.fillRect(0,0,w,h);
     ctx.save();ctx.translate(w/2,h/2);ctx.scale(w/480,h/360);
