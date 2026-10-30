@@ -28,6 +28,8 @@ export const createNativeHTML = (project, title = 'Scratch project') => {
   }));
   const stage = project.sprites.find(s => s.isStage) || {name:'Stage', scripts:[]};
   stage.running = true;
+  const globalVariables = {...(stage.variables || {})};
+  stage.variables = globalVariables;
   stage.images = (stage.costumes || []).map(costume => {
     const encoded=project.assets[costume.asset];
     if(!encoded)return null;
@@ -48,8 +50,8 @@ export const createNativeHTML = (project, title = 'Scratch project') => {
     say(text){sprite.bubble=String(text);sprite.bubbleUntil=Infinity;},
     async sayFor(text,seconds){this.say(text);await sleep(Math.max(0,Number(seconds)||0)*1000);sprite.bubble='';},
     wait(seconds){return sleep(Math.max(0,Number(seconds)||0)*1000);},
-    getVar(name){return sprite.variables ? sprite.variables[name] : 0;},
-    setVar(name,value){if(!sprite.variables)sprite.variables={};sprite.variables[name]=value;},
+    getVar(name){if(sprite.variables && Object.prototype.hasOwnProperty.call(sprite.variables,name))return sprite.variables[name];return Object.prototype.hasOwnProperty.call(globalVariables,name)?globalVariables[name]:0;},
+    setVar(name,value){if(sprite.variables && Object.prototype.hasOwnProperty.call(sprite.variables,name))sprite.variables[name]=value;else if(Object.prototype.hasOwnProperty.call(globalVariables,name))globalVariables[name]=value;else{if(!sprite.variables)sprite.variables={};sprite.variables[name]=value;}},
     nextCostume(){if(sprite.images.length)sprite.costumeIndex=(sprite.costumeIndex+1)%sprite.images.length;},
     switchCostume(name){const index=sprite.images.findIndex(item=>String(item.costume.name).toLowerCase()===String(name).toLowerCase());if(index>=0)sprite.costumeIndex=index;},
     broadcast(name){broadcast(String(name));},
