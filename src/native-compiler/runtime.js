@@ -535,8 +535,15 @@ export class NativeRuntime {
         if(definition) await this.executeStack(target,definition.next,thread);
         break;
       }
-      default:
+      default: {
+        const extension=this.extensions[block.opcode];
+        if(extension && typeof extension.command==='function') {
+          await extension.command({runtime:this,target,block,thread,input:name=>this.value(target,block,name,thread),field:name=>this.field(block,name)});
+          break;
+        }
+        if (this.host.executeExtension && await this.host.executeExtension(block.opcode, {target, block, runtime:this})) break;
         if (!block.opcode.startsWith('event_') && !block.opcode.startsWith('procedures_')) this.host.onUnsupported?.(block.opcode,target);
+        break;
       }
     }
     if(target.penDown && (target.x!==previousX || target.y!==previousY)) this.host.penLine?.(target,previousX,previousY,target.x,target.y);
