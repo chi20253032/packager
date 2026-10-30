@@ -186,7 +186,7 @@ export class NativeRuntime {
       case 'data_variable': return this.getVariable(target, this.field(block, 'VARIABLE', '')).value;
       case 'data_listcontents': return this.getList(target, this.field(block, 'LIST', '')).value.join(' ');
       case 'data_listindexall': return this.getList(target, this.field(block, 'LIST', '')).value.length;
-      case 'operator_add': case 'operator_add': return number(await a('NUM1')) + number(await a('NUM2'));
+      case 'operator_add': return number(await a('NUM1')) + number(await a('NUM2'));
       case 'math_add': return number(await a('NUM1')) + number(await a('NUM2'));
       case 'math_subtract': return number(await a('NUM1')) - number(await a('NUM2'));
       case 'math_multiply': return number(await a('NUM1')) * number(await a('NUM2'));
