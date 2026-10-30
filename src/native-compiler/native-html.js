@@ -151,7 +151,8 @@ export const createNativeHTML = (project, title = 'Scratch project') => {
       warning.hidden = false;
       warning.textContent = '未対応ブロック: ' + current.join(' / ');
     },
-    hitTest
+    hitTest,
+    ask(question) { return Promise.resolve(window.prompt(question) || ''); }
   });
 
   const start = document.getElementById('start');
