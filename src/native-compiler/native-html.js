@@ -32,6 +32,10 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
 
   const canvas = document.getElementById('stage');
   const context = canvas.getContext('2d', {alpha:false});
+  const penCanvas = document.createElement('canvas');
+  penCanvas.width = stageWidth;
+  penCanvas.height = stageHeight;
+  const penContext = penCanvas.getContext('2d');
   const warning = document.getElementById('warning');
   const status = document.getElementById('status');
   const images = new Map();
@@ -185,6 +189,7 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
     if (backdropImage && backdropImage.complete && backdropImage.naturalWidth) {
       context.drawImage(backdropImage, 0, 0, stageWidth, stageHeight);
     }
+    if (penCanvas.width) context.drawImage(penCanvas, 0, 0, stageWidth, stageHeight);
     if (runtime) runtime.targets.filter(target => !target.isStage).sort((a,b) => a.layerOrder-b.layerOrder).forEach(drawTarget);
     context.restore();
   };
@@ -196,6 +201,31 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
       }
     },
     onTargetChange() { draw(); },
+    penClear() { penContext.clearRect(0, 0, penCanvas.width, penCanvas.height); draw(); },
+    penLine(target, x1, y1, x2, y2) {
+      penContext.strokeStyle = target.penColor || '#000000';
+      penContext.lineWidth = Math.max(1, target.penSize || 1);
+      penContext.lineCap = 'round';
+      penContext.lineJoin = 'round';
+      penContext.beginPath();
+      penContext.moveTo(x1 + stageWidth / 2, stageHeight / 2 - y1);
+      penContext.lineTo(x2 + stageWidth / 2, stageHeight / 2 - y2);
+      penContext.stroke();
+      draw();
+    },
+    penStamp(target) {
+      const costume = currentCostume(target), image = imageFor(costume);
+      if (!image || !image.complete || !image.naturalWidth) return;
+      penContext.save();
+      penContext.translate(target.x + stageWidth / 2, stageHeight / 2 - target.y);
+      if (target.rotationStyle === 'all around') penContext.rotate(((target.direction || 90) - 90) * Math.PI / 180);
+      penContext.scale((target.size || 100) / 100, (target.size || 100) / 100);
+      const cx = Number.isFinite(costume.rotationCenterX) ? costume.rotationCenterX : image.naturalWidth / 2;
+      const cy = Number.isFinite(costume.rotationCenterY) ? costume.rotationCenterY : image.naturalHeight / 2;
+      penContext.drawImage(image, -cx, -cy);
+      penContext.restore();
+      draw();
+    },
     onVariable() { draw(); },
     onClone() { draw(); },
     onDeleteClone() { draw(); },
