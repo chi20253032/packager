@@ -435,3 +435,17 @@ export class NativeRuntime {
   pointerDown(x,y) {this.pointerMove(x,y);this.mouse.down=true;this.runHat('event_whenthisspriteclicked',(_b,t)=>!t.isStage&&this.host.hitTest?.(t,x,y));this.runHat('event_whenstageclicked',(_b,t)=>t.isStage);}
   pointerUp() {this.mouse.down=false;}
 }
+
+
+/**
+ * Serialize the native interpreter into a self-contained browser script.
+ * Kept as source so exported HTML never needs a module loader or Scratch VM.
+ */
+export const getNativeRuntimeSource = () => [
+  'const clamp = ' + clamp.toString() + ';',
+  'const number = ' + number.toString() + ';',
+  'const text = ' + text.toString() + ';',
+  'const truthy = ' + truthy.toString() + ';',
+  'const keyName = ' + keyName.toString() + ';',
+  'const NativeRuntime = ' + NativeRuntime.toString() + ';'
+].join('\\n');
