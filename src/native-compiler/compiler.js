@@ -86,7 +86,7 @@ const compileStack = (blocks, firstId, diagnostics, depth = 0) => {
       case 'looks_say': output += `api.say(${value('MESSAGE','')});\n`; break;
       case 'looks_sayforsecs': output += `await api.sayFor(${value('MESSAGE','')},${value('SECS',2)});\n`; break;
       case 'control_wait': output += `await api.wait(${value('DURATION',1)});\n`; break;
-      case 'control_repeat': output += `for(let n=0;n<Math.max(0,Math.min(10000,+(${value('TIMES')}));n++){\n${substack('SUBSTACK')}\n}\n`; break;
+      case 'control_repeat': output += `for(let n=0;n<Math.max(0,Math.min(10000,+(${value('TIMES')})));n++){\n${substack('SUBSTACK')}\n}\n`; break;
       case 'control_forever': output += `while(api.running){\n${substack('SUBSTACK')}\nawait api.yield();\n}\n`; break;
       case 'control_if': output += `if(${value('CONDITION')}){\n${substack('SUBSTACK')}\n}\n`; break;
       case 'control_if_else': output += `if(${value('CONDITION')}){\n${substack('SUBSTACK')}\n}else{\n${substack('SUBSTACK2')}\n}\n`; break;
