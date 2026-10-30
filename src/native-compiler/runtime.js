@@ -408,7 +408,6 @@ export class NativeRuntime {
       case 'sound_changevolume': target.volume+=await n('VOLUME'); break;
       case 'sound_stopallsounds': this.host.stopAllSounds?.(); break;
       case 'sensing_resettimer': this.startedAt=performance.now(); break;
-      case 'sensing_resettimer': this.startedAt=performance.now(); break;
       case 'sensing_askandwait': this.answer = await (this.host.ask ? this.host.ask(text(await v('QUESTION'))) : (typeof prompt === 'function' ? prompt(text(await v('QUESTION'))) : '')); break;
       case 'data_setvariableto': this.setVariable(target,this.fieldId(block,'VARIABLE'),await v('VALUE')); break;
       case 'data_changevariableby': {
@@ -417,7 +416,7 @@ export class NativeRuntime {
       }
       case 'data_addtolist': this.getList(target,this.fieldId(block,'LIST')).value.push(await v('ITEM')); break;
       case 'data_deleteoflist': {
-        const list=this.getList(target,this.field(block,'LIST')).value, index=this.listIndex(await v('INDEX'),list.length);
+        const list=this.getList(target,this.fieldId(block,'LIST')).value, index=this.listIndex(await v('INDEX'),list.length);
         if (index>=0) list.splice(index,1); break;
       }
       case 'data_deletealloflist': this.getList(target,this.field(block,'LIST')).value.length=0; break;
@@ -521,6 +520,6 @@ export const getNativeRuntimeSource = () => [
   'const text = ' + text.toString() + ';',
   'const truthy = ' + truthy.toString() + ';',
   'const keyName = ' + keyName.toString() + ';',
-  'const NATIVE_RUNTIME_SUPPORTED = new Set(["event_whenflagclicked","event_whenkeypressed","event_whenthisspriteclicked","event_whenstageclicked","event_whenbroadcastreceived","control_start_as_clone","motion_movesteps","motion_turnright","motion_turnleft","motion_goto","motion_gotoxy","motion_glidesecstoxy","motion_setx","motion_sety","motion_changexby","motion_changeyby","motion_pointindirection","motion_pointtowards","motion_ifonedgebounce","looks_show","looks_hide","looks_setsizeto","looks_changesizeby","looks_nextcostume","looks_switchcostumeto","looks_say","looks_think","looks_sayforsecs","looks_thinkforsecs","looks_cleargraphiceffects","looks_changeeffectby","looks_seteffectto","looks_gotofrontback","looks_goforwardbackwardlayers","looks_switchbackdropto","looks_switchbackdroptoandwait","looks_nextbackdrop","sound_setvolume","sound_changevolume","sound_stopallsounds","data_variable","data_setvariableto","data_changevariableby","data_listcontents","data_listindexall","data_addtolist","data_deleteoflist","data_deletealloflist","data_insertatlist","data_replaceitemoflist","data_itemoflist","data_itemnumoflist","data_listcontainsitem","control_wait","control_repeat","control_forever","control_if","control_if_else","control_repeat_until","control_wait_until","control_stop","control_create_clone_of","control_delete_this_clone","event_broadcast","event_broadcastandwait","procedures_call","math_number","math_integer","math_whole_number","text","logic_boolean","logic_null","colour_picker","math_add","math_subtract","math_multiply","math_divide","math_modulo","math_round","math_random","math_single","operator_add","operator_subtract","operator_multiply","operator_divide","operator_mod","operator_round","operator_random","operator_mathop","operator_equals","operator_gt","operator_lt","operator_and","operator_or","operator_not","operator_join","operator_length","operator_contains","operator_letter_of","operator_of","sensing_mousex","sensing_mousey","sensing_mousedown","sensing_keypressed","sensing_timer","sensing_resettimer","sensing_answer","sensing_askandwait","sensing_username","sensing_current","sensing_dayssince2000","sensing_distanceto","sensing_touchingobject"]);',
+  'const NATIVE_RUNTIME_SUPPORTED = new Set(' + JSON.stringify([...NATIVE_RUNTIME_SUPPORTED]) + ');',
   'const NativeRuntime = ' + NativeRuntime.toString() + ';'
 ].join('\\n');
