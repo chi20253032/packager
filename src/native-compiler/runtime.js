@@ -530,4 +530,4 @@ export const getNativeRuntimeSource = () => [
   'const keyName = ' + keyName.toString() + ';',
   'const NATIVE_RUNTIME_SUPPORTED = new Set(' + JSON.stringify([...NATIVE_RUNTIME_SUPPORTED]) + ');',
   'const NativeRuntime = ' + NativeRuntime.toString() + ';'
-].join('\\n');
+].join('\n');
