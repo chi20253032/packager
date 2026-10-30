@@ -1,0 +1,45 @@
+import {compileNativeProject} from './compiler';
+
+const block = (opcode, next = null, inputs = {}, fields = {}, topLevel = false) => ({
+  opcode, next, inputs, fields, topLevel, shadow: false
+});
+
+describe('native Scratch compiler', () => {
+  test('compiles flag scripts and core motion commands', () => {
+    const project = {
+      targets: [{
+        name: 'Sprite1',
+        isStage: false,
+        blocks: {
+          flag: block('event_whenflagclicked', 'move', {}, {}, true),
+          move: block('motion_movesteps', 'hide', {STEPS: [1, [4, '10']]}),
+          hide: block('looks_hide')
+        }
+      }]
+    };
+    const result = compileNativeProject(project);
+    expect(result.sprites[0].scripts).toHaveLength(1);
+    expect(result.sprites[0].scripts[0].trigger.type).toBe('flag');
+    expect(result.sprites[0].scripts[0].code).toContain('api.move(10,0)');
+    expect(result.sprites[0].scripts[0].code).toContain('api.sprite.visible=false');
+    expect(result.unsupportedOpcodes).toEqual([]);
+  });
+
+  test('reports unsupported opcodes instead of silently dropping them', () => {
+    const project = {
+      targets: [{
+        name: 'Sprite1',
+        blocks: {
+          flag: block('event_whenflagclicked', 'extension', {}, {}, true),
+          extension: block('motion_glidesecstoxy')
+        }
+      }]
+    };
+    const result = compileNativeProject(project);
+    expect(result.unsupportedOpcodes).toContain('motion_glidesecstoxy');
+  });
+
+  test('rejects malformed project data', () => {
+    expect(() => compileNativeProject({})).toThrow('targets are missing');
+  });
+});
