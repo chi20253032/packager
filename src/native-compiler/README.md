@@ -1,27 +1,18 @@
-# Native HTML export (experimental)
+# Native HTML export
 
-The **Native HTML** target is a separate export path. Unlike the regular HTML target, it does not include Scratch VM, Scratch Renderer, Scratch Audio, or Packager scaffolding. It compiles event-script block graphs into project-specific JavaScript and renders the stage on a small canvas host. Scratch costume image bytes are embedded in the resulting document.
+The Native HTML target is an independent HTML/CSS/JavaScript implementation. It must not load Scratch VM, Scratch Player, Scratch Renderer, Scratch Audio, or Packager scaffolding at runtime.
 
-## Current compatibility
+## Runtime architecture
 
-This is an early compiler milestone, not yet a complete Scratch implementation. It currently supports:
-- Green-flag, key-press, sprite-click, and stage-click hats
-- Basic motion (move, turn, go to/glide to, set/change x/y, direction, edge bounce, position reporters)
-- Show/hide and say/say-for-seconds
-- Wait, repeat, forever, if, if/else, stop, broadcasts, and broadcast-and-wait
-- Core arithmetic, comparisons, boolean operators, join, random, math operators, text helpers, mouse and keyboard reporters
-- Embedded sprite and stage costume rendering (first costume)
-- Per-sprite variables, variable set/change, costume switching, and broadcast/broadcast-and-wait
+- SB3 project data is parsed as native block graphs.
+- `src/native-compiler/runtime.js` provides an independent cooperative interpreter, target state, variables, lists, event dispatch, broadcasts, clone lifecycle, and host callbacks.
+- The host owns canvas/WebAudio rendering and extension adapters. The runtime itself has no dependency on Scratch VM.
+- Unsupported opcodes are surfaced through a host diagnostic callback; they must never be silently reported as supported.
 
-Unsupported opcodes are collected during compilation and displayed in the exported HTML. They are not silently interpreted as successful operations.
+## Current implementation status
 
-Not implemented yet: costume effects, clones, lists, sound/music, pen, sensing/collision, extensions, monitors, cloud variables, and full Scratch scheduling/edge-case semantics. The regular HTML export remains the compatibility choice for projects that depend on these features.
+The runtime foundation implements core motion, looks, control flow, operators, variables, lists, keyboard/mouse input, broadcasts, and basic clone creation. It is an active compatibility implementation, not yet a drop-in replacement for every Scratch/TurboWarp feature. Costume effects, complete collision sensing, pen, full audio sequencing, monitors, cloud services, custom procedures/warp semantics, and arbitrary extension implementations still require dedicated work and conformance tests.
 
-## Architecture
+## Development rule
 
-1. Read project.json from the original SB3 archive.
-2. Compile supported block stacks into JavaScript.
-3. Embed the project-specific script bundle and costume assets in a standalone HTML document.
-4. Run the generated scripts with a small native canvas host.
-
-The exported file has no runtime network requests and does not contain the Scratch Player or Scratch VM.
+Every newly supported opcode must have a test. Extension support must be implemented through documented native adapters; loading arbitrary extension scripts is not equivalent to native compatibility.

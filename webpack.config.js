@@ -154,6 +154,16 @@ const makeWebsite = () => ({
   module: {
     rules: [
       {
+        test: /\.js$/,
+        include: [path.resolve(__dirname, 'src', 'native-compiler')],
+        loader: 'babel-loader',
+        options: {
+          babelrc: false,
+          configFile: false,
+          presets: [['@babel/preset-env', {targets: {chrome: '80'}}]]
+        }
+      },
+      {
         test: /\.png|\.svg$/i,
         use: isStandalone ? {
           loader: 'url-loader'
