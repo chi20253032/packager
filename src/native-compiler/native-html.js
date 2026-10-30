@@ -287,11 +287,15 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
   resize();
   document.getElementById('project-name').textContent = project.projectName || 'Scratch project';
   draw();
+  if (project.nativeOptions.custom && project.nativeOptions.custom.js) {
+    try { (new Function('runtime', 'project', project.nativeOptions.custom.js))(runtime, project); }
+    catch (error) { warning.hidden = false; warning.textContent = 'カスタムJavaScriptエラー: ' + error.message; }
+  }
   const unsupported = new Set();
   for (const target of project.targets) {
     for (const block of Object.values(target.blocks || {})) {
       if (block && !block.shadow && !block.disabled && block.topLevel !== undefined) {
-        if (!NATIVE_RUNTIME_SUPPORTED.has(block.opcode)) unsupported.add(block.opcode);
+        if (!NATIVE_RUNTIME_SUPPORTED.has(block.opcode) && !runtime.extensions[block.opcode]) unsupported.add(block.opcode);
       }
     }
   }
@@ -300,10 +304,6 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
     warning.textContent = '未対応ブロック: ' + Array.from(unsupported).sort().join(' / ');
   }
   if (project.nativeOptions.autoplay) runtime.start();
-  if (project.nativeOptions.custom && project.nativeOptions.custom.js) {
-    try { (new Function('runtime', 'project', project.nativeOptions.custom.js))(runtime, project); }
-    catch (error) { warning.hidden = false; warning.textContent = 'カスタムJavaScriptエラー: ' + error.message; }
-  }
 })();
 `;
 
