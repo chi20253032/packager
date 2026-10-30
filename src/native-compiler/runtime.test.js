@@ -7,7 +7,7 @@ describe('native runtime v2',()=>{
   test('runs SB3 block graphs without importing Scratch VM',async()=>{
     const project=makeProject({
       flag:makeBlock('event_whenflagclicked','set',{}, {},true),
-      set:makeBlock('data_setvariableto','move',{VALUE:[1,[4,'12']]},{VARIABLE:['score','score-id']}),
+      set:makeBlock('data_setvariableto','move',{VALUE:[1,[4,'12']]},{VARIABLE:['score','score']}),
       move:makeBlock('motion_changexby',null,{DX:[1,[4,'8']]})
     });
     const runtime=new NativeRuntime(project);
@@ -22,10 +22,10 @@ describe('native runtime v2',()=>{
     const project=makeProject({
       flag:makeBlock('event_whenflagclicked','repeat',{}, {},true),
       repeat:makeBlock('control_repeat','condition',{TIMES:[1,[4,'3']],SUBSTACK:[2,'add']}),
-      add:makeBlock('data_addtolist','condition2',{ITEM:[1,[10,'x']]},{LIST:['items','list-id']}),
+      add:makeBlock('data_addtolist','condition2',{ITEM:[1,[10,'x']]},{LIST:['items','items']}),
       condition:makeBlock('control_if',null,{CONDITION:[2,'equals'],SUBSTACK:[2,'change']}),
       equals:makeBlock('operator_equals',null,{OPERAND1:[1,[10,'yes']],OPERAND2:[1,[10,'yes']]}),
-      change:makeBlock('data_changevariableby',null,{VALUE:[1,[4,'1']]},{VARIABLE:['score','score-id']})
+      change:makeBlock('data_changevariableby',null,{VALUE:[1,[4,'1']]},{VARIABLE:['score','score']})
     });
     const runtime=new NativeRuntime(project);
     runtime.start();
@@ -40,7 +40,7 @@ describe('native runtime v2',()=>{
       flag:makeBlock('event_whenflagclicked','send',{}, {},true),
       send:makeBlock('event_broadcastandwait',null,{BROADCAST_INPUT:[1,[11,'ready','broadcast-id']]}),
       receiver:makeBlock('event_whenbroadcastreceived','update',{}, {BROADCAST_OPTION:['ready','broadcast-id']},true),
-      update:makeBlock('data_changevariableby',null,{VALUE:[1,[4,'5']]},{VARIABLE:['score','score-id']})
+      update:makeBlock('data_changevariableby',null,{VALUE:[1,[4,'5']]},{VARIABLE:['score','score']})
     });
     const runtime=new NativeRuntime(project);
     runtime.start();
