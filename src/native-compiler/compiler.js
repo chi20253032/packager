@@ -57,6 +57,7 @@ const compileExpression = (blocks, block, depth = 0) => {
     case 'sensing_mousey': return 'input.mouseY';
     case 'sensing_mousedown': return 'input.mouseDown';
     case 'sensing_keypressed': return `input.keys.has(String(${next('KEY_OPTION')}).toLowerCase())`;
+    case 'data_variable': return `api.getVar(${jsonForScript(getField(block, 'VARIABLE'))})`;
     default: return '0';
   }
 };
@@ -119,6 +120,7 @@ export const compileNativeProject = (project) => {
       if (block.opcode === 'event_whenkeypressed') trigger = {type:'key', key:getField(block,'KEY_OPTION').toLowerCase()};
       if (block.opcode === 'event_whenthisspriteclicked') trigger = {type:'click'};
       if (block.opcode === 'event_whenstageclicked') trigger = {type:'stage-click'};
+      if (block.opcode === 'event_whenbroadcastreceived') trigger = {type:'broadcast', name:getField(block,'BROADCAST_OPTION')};
       if (!trigger) {
         if (block.opcode.startsWith('event_')) diagnostics.add(block.opcode);
         continue;
@@ -133,6 +135,7 @@ export const compileNativeProject = (project) => {
       direction: Number(target.direction) || 90,
       size: Number(target.size) || 100,
       visible: target.visible !== false,
+      variables: Object.fromEntries(Object.values(target.variables || {}).map(variable => [variable[0], variable[1]])),
       costumes: (target.costumes || []).map(costume => ({
         name: costume.name,
         asset: costume.md5ext || (costume.assetId && (costume.assetId + '.' + costume.dataFormat)),
