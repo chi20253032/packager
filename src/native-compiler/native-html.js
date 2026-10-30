@@ -73,13 +73,13 @@ export const createNativeHTML = (project, title = 'Scratch project') => {
     await Promise.all(jobs.filter(Boolean));
   };
   const launch = (sprite, script) => {
-    if (!running) return;
+    if (!running || sprite.running === false) return;
     const api=apiFor(sprite);
     try { return (new Function('api','input','return (async()=>{'+script.code+'})()'))(api,input).catch(error=>console.error('Native script error:',error)); }
     catch(error){console.error('Native script error:',error);return Promise.resolve();}
   };
   const runTrigger = type => { (stage.scripts || []).filter(s=>s.trigger.type===type).forEach(s=>launch(stage,s)); sprites.forEach(sprite => sprite.scripts.filter(s=>s.trigger.type===type).forEach(s=>launch(sprite,s))); };
-  const spriteReset = () => sprites.forEach(sprite=>{sprite.running=true;});
+  const spriteReset = () => {stage.running=true;sprites.forEach(sprite=>{sprite.running=true;});};
   const resize = () => {const dpr=Math.min(devicePixelRatio||1,2);canvas.width=Math.round(innerWidth*dpr);canvas.height=Math.round(innerHeight*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);};
   addEventListener('resize',resize);resize();
   canvas.addEventListener('pointermove',e=>{const r=canvas.getBoundingClientRect();input.mouseX=(e.clientX-r.left-r.width/2)*480/r.width;input.mouseY=-(e.clientY-r.top-r.height/2)*360/r.height;});
