@@ -6,10 +6,10 @@ The **Native HTML** target is a separate export path. Unlike the regular HTML ta
 
 This is an early compiler milestone, not yet a complete Scratch implementation. It currently supports:
 - Green-flag, key-press, sprite-click, and stage-click hats
-- Basic motion (move, turn, go to, set/change x/y, direction)
+- Basic motion (move, turn, go to/glide to, set/change x/y, direction, edge bounce, position reporters)
 - Show/hide and say/say-for-seconds
-- Wait, repeat, forever, if, if/else, and stop
-- Core arithmetic, comparisons, boolean operators, join, random, mouse and keyboard reporters
+- Wait, repeat, forever, if, if/else, stop, broadcasts, and broadcast-and-wait
+- Core arithmetic, comparisons, boolean operators, join, random, math operators, text helpers, mouse and keyboard reporters
 - Embedded sprite and stage costume rendering (first costume)
 - Per-sprite variables, variable set/change, costume switching, and broadcast/broadcast-and-wait
 
