@@ -29,6 +29,14 @@ export class NativeRuntime {
     if (!project || !Array.isArray(project.targets)) throw new Error('Invalid SB3 project: targets missing');
     this.project = project;
     this.host = host;
+    this.options = project.nativeOptions || {};
+    this.stageWidth = clamp(number(this.options.stageWidth ?? 480), 1, 10000);
+    this.stageHeight = clamp(number(this.options.stageHeight ?? 360), 1, 10000);
+    this.maxClones = this.options.maxClones == null ? Infinity : Math.max(0, Math.floor(number(this.options.maxClones)));
+    this.fencing = this.options.fencing !== false;
+    this.turbo = !!this.options.turbo;
+    this.framerate = clamp(number(this.options.framerate ?? 30), 1, 240);
+    this.username = text(this.options.username || 'player').replace(/####/g, String(Math.floor(Math.random()*9000)+1000));
     this.running = false;
     this.paused = false;
     this.frame = 0;
@@ -106,7 +114,13 @@ export class NativeRuntime {
 
   async yield() {
     if (this.host.yield) return this.host.yield();
-    return new Promise(resolve => setTimeout(resolve, 0));
+    return new Promise(resolve => setTimeout(resolve, this.turbo ? 0 : 1000 / this.framerate));
+  }
+
+  fence(target) {
+    if (!this.fencing || target.isStage) return;
+    target.x = clamp(target.x, -this.stageWidth / 2, this.stageWidth / 2);
+    target.y = clamp(target.y, -this.stageHeight / 2, this.stageHeight / 2);
   }
 
   async wait(seconds, thread) {
@@ -262,7 +276,7 @@ export class NativeRuntime {
       case 'sensing_touchingobject': {
         const who=text(await a('TOUCHINGOBJECTMENU'));
         if(who==='_mouse_') return this.host.hitTest ? this.host.hitTest(target,this.mouse.x,this.mouse.y) : false;
-        if(who==='_edge_') return target.x < -230 || target.x > 230 || target.y < -170 || target.y > 170;
+        if(who==='_edge_') return target.x < -this.stageWidth/2 || target.x > this.stageWidth/2 || target.y < -this.stageHeight/2 || target.y > this.stageHeight/2;
         const other=this.targets.find(item=>item.name===who);
         return !!other && other!==target && Math.hypot(target.x-other.x,target.y-other.y)<42;
       }
@@ -321,7 +335,7 @@ export class NativeRuntime {
     switch (block.opcode) {
       case 'motion_movesteps': {
         const radians = target.direction * Math.PI / 180, distance = await n('STEPS');
-        target.x += Math.sin(radians) * distance; target.y += Math.cos(radians) * distance; break;
+        target.x += Math.sin(radians) * distance; target.y += Math.cos(radians) * distance; this.fence(target); break;
       }
       case 'motion_turnright': target.direction += await n('DEGREES'); break;
       case 'motion_turnleft': target.direction -= await n('DEGREES'); break;
@@ -329,26 +343,26 @@ export class NativeRuntime {
         const dest = text(await v('TO'));
         const other = this.targets.find(item => item.name === dest);
         if (dest === '_mouse_') { target.x=this.mouse.x; target.y=this.mouse.y; }
-        else if (dest === '_random_') { target.x=Math.random()*480-240; target.y=Math.random()*360-180; }
+        else if (dest === '_random_') { target.x=Math.random()*this.stageWidth-this.stageWidth/2; target.y=Math.random()*this.stageHeight-this.stageHeight/2; }
         else if (other) { target.x=other.x; target.y=other.y; }
-        break;
+        this.fence(target); break;
       }
-      case 'motion_gotoxy': target.x=await n('X'); target.y=await n('Y'); break;
+      case 'motion_gotoxy': target.x=await n('X'); target.y=await n('Y'); this.fence(target); break;
       case 'motion_glidesecstoxy': {
         const duration = Math.max(0, await n('SECS')), sx=target.x, sy=target.y, x=await n('X'), y=await n('Y'), start=performance.now();
         while (this.running && !thread.cancelled) {
           const t = duration ? clamp((performance.now()-start)/(duration*1000),0,1) : 1;
-          target.x=sx+(x-sx)*t; target.y=sy+(y-sy)*t;
+          target.x=sx+(x-sx)*t; target.y=sy+(y-sy)*t; this.fence(target);
           this.host.onTargetChange?.(target, block.opcode);
           if (t >= 1) break;
           await this.yield();
         }
         break;
       }
-      case 'motion_setx': target.x=await n('X'); break;
-      case 'motion_sety': target.y=await n('Y'); break;
-      case 'motion_changexby': target.x+=await n('DX'); break;
-      case 'motion_changeyby': target.y+=await n('DY'); break;
+      case 'motion_setx': target.x=await n('X'); this.fence(target); break;
+      case 'motion_sety': target.y=await n('Y'); this.fence(target); break;
+      case 'motion_changexby': target.x+=await n('DX'); this.fence(target); break;
+      case 'motion_changeyby': target.y+=await n('DY'); this.fence(target); break;
       case 'motion_pointindirection': target.direction=await n('DIRECTION'); break;
       case 'motion_pointtowards': {
         const dest=text(await v('TOWARDS')), other=this.targets.find(item=>item.name===dest);
@@ -358,9 +372,9 @@ export class NativeRuntime {
       }
       case 'motion_ifonedgebounce': {
         let dx=Math.sin(target.direction*Math.PI/180),dy=Math.cos(target.direction*Math.PI/180);
-        if(target.x>220||target.x< -220)dx=-dx;
-        if(target.y>160||target.y< -160)dy=-dy;
-        target.x=clamp(target.x,-230,230);target.y=clamp(target.y,-170,170);
+        if(target.x>this.stageWidth/2-20||target.x< -this.stageWidth/2+20)dx=-dx;
+        if(target.y>this.stageHeight/2-20||target.y< -this.stageHeight/2+20)dy=-dy;
+        target.x=clamp(target.x,-this.stageWidth/2+20,this.stageWidth/2-20);target.y=clamp(target.y,-this.stageHeight/2+20,this.stageHeight/2-20);
         target.direction=Math.atan2(dx,dy)*180/Math.PI;
         break;
       }
@@ -500,7 +514,7 @@ export class NativeRuntime {
   }
 
   createClone(original) {
-    if(this.clones.length>=300) return null;
+    if(this.clones.length>=this.maxClones) return null;
     const clone={...original,id:original.id+'-clone-'+(this.clones.length+1),variables:Object.fromEntries(Object.entries(original.variables).map(([k,v])=>[k,{...v}])),lists:Object.fromEntries(Object.entries(original.lists).map(([k,v])=>[k,{...v,value:v.value.slice()}])),isOriginal:false,alive:true,clones:[],effects:{...original.effects}};
     this.clones.push(clone);this.targets.push(clone);this.host.onClone?.(clone);
     for(const block of Object.values(clone.blocks)) if(block?.topLevel&&block.opcode==='control_start_as_clone') this.launch(clone,block);
