@@ -182,7 +182,7 @@
     previewer = new Preview();
     const task = new Task();
     const optionsClone = deepClone($options);
-    optionsClone.target = 'html';
+    optionsClone.target = $options.target === 'native-html' ? 'native-html' : 'html';
     try {
       result = await task.do(runPackager(task, optionsClone));
       task.done();
