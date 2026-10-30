@@ -41,6 +41,7 @@ export class NativeRuntime {
     if (!project || !Array.isArray(project.targets)) throw new Error('Invalid SB3 project: targets missing');
     this.project = project;
     this.host = host;
+    this.extensions = host.extensions || Object.create(null);
     this.options = project.nativeOptions || {};
     this.stageWidth = this.constructor.clamp(this.constructor.number(this.options.stageWidth ?? 480), 1, 10000);
     this.stageHeight = this.constructor.clamp(this.constructor.number(this.options.stageHeight ?? 360), 1, 10000);
@@ -212,6 +213,13 @@ export class NativeRuntime {
     return 0;
   }
 
+  registerExtension(opcode, handlers) {
+    if (!opcode || !handlers || (typeof handlers.command !== 'function' && typeof handlers.reporter !== 'function')) {
+      throw new Error('A native extension must provide a command or reporter handler.');
+    }
+    this.extensions[opcode] = handlers;
+  }
+
   field(block, name, fallback = '') {
     return block.fields?.[name]?.[0] ?? fallback;
   }
@@ -326,10 +334,13 @@ export class NativeRuntime {
         const other = this.targets.find(item => item.name === who);
         return other ? Math.hypot(other.x-target.x, other.y-target.y) : Math.hypot(this.mouse.x-target.x,this.mouse.y-target.y);
       }
-      default:
+      default: {
+        const extension=this.extensions[block.opcode];
+        if(extension && typeof extension.reporter==='function') return await extension.reporter({runtime:this,target,block,thread,input:name=>this.value(target,block,name,thread,depth+1),field:name=>this.field(block,name)});
         if (this.host.evaluateExtension) return await this.host.evaluateExtension(block.opcode, {target, block, runtime:this});
         this.host.onUnsupported?.(block.opcode, target);
         return 0;
+      }
     }
   }
 
@@ -526,6 +537,7 @@ export class NativeRuntime {
       }
       default:
         if (!block.opcode.startsWith('event_') && !block.opcode.startsWith('procedures_')) this.host.onUnsupported?.(block.opcode,target);
+      }
     }
     if(target.penDown && (target.x!==previousX || target.y!==previousY)) this.host.penLine?.(target,previousX,previousY,target.x,target.y);
     this.host.onTargetChange?.(target,block.opcode);
