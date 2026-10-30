@@ -207,7 +207,8 @@ export class NativeRuntime {
     const input = block.inputs?.[name];
     const shadow = input && (input[1] || input[2]);
     if (Array.isArray(shadow)) {
-      if ([4, 5, 6, 7, 8, 9, 10, 11, 12, 13].includes(shadow[0])) return shadow[1];
+      if ([4, 5, 6, 7, 8].includes(shadow[0])) { const numeric=Number(shadow[1]); return Number.isFinite(numeric) ? numeric : 0; }
+      if ([9, 10, 11, 12, 13].includes(shadow[0])) return shadow[1];
       return shadow[1] ?? 0;
     }
     return 0;
