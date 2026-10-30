@@ -1262,7 +1262,16 @@ cd "$(dirname "$0")"
     this.used = true;
     this.ensureNotAborted();
     if (this.options.target === 'native-html') {
-      const html = createNativeHTML(this.project, this.options.app.windowTitle);
+      let projectJSON;
+      if (this.project.type === 'blob') {
+        projectJSON = JSON.parse(new TextDecoder().decode(this.project.arrayBuffer));
+      } else {
+        const projectZip = await (await getJSZip()).loadAsync(this.project.arrayBuffer);
+        const projectFile = projectZip.file('project.json');
+        if (!projectFile) throw new Error('Invalid Scratch project: project.json is missing from the SB3 archive.');
+        projectJSON = JSON.parse(await projectFile.async('string'));
+      }
+      const html = createNativeHTML(projectJSON, this.options.app.windowTitle);
       this.ensureNotAborted();
       return {
         data: html,
