@@ -24,17 +24,17 @@ const getInputBlock = (blocks, block, name) => {
   return null;
 };
 
-const getInputValue = (blocks, block, name, fallback = 0) => {
+const getInputValue = (blocks, block, name, fallback = 0, diagnostics = null) => {
   const child = getInputBlock(blocks, block, name);
-  if (child) return compileExpression(blocks, child);
+  if (child) return compileExpression(blocks, child, 0, diagnostics);
   const input = block.inputs && block.inputs[name];
   if (input && Array.isArray(input[1]) && input[1][1] !== undefined) return jsonForScript(input[1][1]);
   return jsonForScript(fallback);
 };
 
-const compileExpression = (blocks, block, depth = 0) => {
+const compileExpression = (blocks, block, depth = 0, diagnostics = null) => {
   if (!block || depth > 64) return '0';
-  const next = (name) => compileExpression(blocks, getInputBlock(blocks, block, name), depth + 1);
+  const next = (name) => compileExpression(blocks, getInputBlock(blocks, block, name), depth + 1, diagnostics);
   switch (block.opcode) {
     case 'math_number':
     case 'text':
@@ -58,7 +58,9 @@ const compileExpression = (blocks, block, depth = 0) => {
     case 'sensing_mousedown': return 'input.mouseDown';
     case 'sensing_keypressed': return `input.keys.has(String(${next('KEY_OPTION')}).toLowerCase())`;
     case 'data_variable': return `api.getVar(${jsonForScript(getField(block, 'VARIABLE'))})`;
-    default: return '0';
+    default:
+      if (diagnostics) diagnostics.add(block.opcode);
+      return '0';
   }
 };
 
@@ -70,7 +72,7 @@ const compileStack = (blocks, firstId, diagnostics, depth = 0) => {
   while (id && blocks[id] && !visited.has(id)) {
     visited.add(id);
     const block = blocks[id];
-    const value = (name, fallback = 0) => getInputValue(blocks, block, name, fallback);
+    const value = (name, fallback = 0) => getInputValue(blocks, block, name, fallback, diagnostics);
     const substack = (name) => compileStack(blocks, getInputBlock(blocks, block, name)?.id, diagnostics, depth + 1);
     switch (block.opcode) {
       case 'motion_movesteps': output += `await api.move(${value('STEPS')},0);\n`; break;
