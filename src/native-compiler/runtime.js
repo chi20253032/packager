@@ -17,7 +17,7 @@ const truthy = value => {
   if (typeof value === 'string') return value.length > 0 && value !== '0';
   return Boolean(value);
 };
-const NATIVE_RUNTIME_SUPPORTED = new Set(["event_whenflagclicked","event_whenkeypressed","event_whenthisspriteclicked","event_whenstageclicked","event_whenbroadcastreceived","event_whenbackdropswitchesto","control_start_as_clone","motion_movesteps","motion_turnright","motion_turnleft","motion_goto","motion_gotoxy","motion_glidesecstoxy","motion_setx","motion_sety","motion_changexby","motion_changeyby","motion_pointindirection","motion_pointtowards","motion_ifonedgebounce","motion_xposition","motion_yposition","motion_direction","looks_show","looks_hide","looks_setsizeto","looks_changesizeby","looks_nextcostume","looks_switchcostumeto","looks_say","looks_think","looks_sayforsecs","looks_thinkforsecs","looks_gotofrontback","looks_goforwardbackwardlayers","looks_switchbackdropto","looks_switchbackdroptoandwait","looks_nextbackdrop","looks_size","looks_costumenumbername","data_variable","data_setvariableto","data_changevariableby","data_listcontents","data_lengthoflist","data_addtolist","data_deleteoflist","data_deletealloflist","data_insertatlist","data_replaceitemoflist","data_itemoflist","data_itemnumoflist","data_listcontainsitem","control_wait","control_repeat","control_forever","control_if","control_if_else","control_repeat_until","control_wait_until","control_stop","control_create_clone_of","control_delete_this_clone","event_broadcast","event_broadcastandwait","math_number","math_integer","math_whole_number","text","logic_boolean","logic_null","colour_picker","math_add","math_subtract","math_multiply","math_divide","math_modulo","math_round","math_random","math_single","operator_add","operator_subtract","operator_multiply","operator_divide","operator_mod","operator_round","operator_random","operator_mathop","operator_equals","operator_gt","operator_lt","operator_and","operator_or","operator_not","operator_join","operator_length","operator_contains","operator_letter_of","operator_of","sensing_mousex","sensing_mousey","sensing_mousedown","sensing_keypressed","sensing_timer","sensing_resettimer","sensing_answer","sensing_askandwait","sensing_username","sensing_current","sensing_dayssince2000","sensing_distanceto","sensing_touchingobject"]);
+const NATIVE_RUNTIME_SUPPORTED = new Set(["event_whenflagclicked","event_whenkeypressed","event_whenthisspriteclicked","event_whenstageclicked","event_whenbroadcastreceived","event_whenbackdropswitchesto","control_start_as_clone","motion_movesteps","motion_turnright","motion_turnleft","motion_goto","motion_gotoxy","motion_glidesecstoxy","motion_setx","motion_sety","motion_changexby","motion_changeyby","motion_pointindirection","motion_pointtowards","motion_ifonedgebounce","motion_xposition","motion_yposition","motion_direction","looks_show","looks_hide","looks_setsizeto","looks_changesizeby","looks_nextcostume","looks_switchcostumeto","looks_say","looks_think","looks_sayforsecs","looks_thinkforsecs","looks_gotofrontback","looks_goforwardbackwardlayers","looks_switchbackdropto","looks_switchbackdroptoandwait","looks_nextbackdrop","looks_size","looks_costumenumbername","data_variable","data_setvariableto","data_changevariableby","data_listcontents","data_lengthoflist","data_addtolist","data_deleteoflist","data_deletealloflist","data_insertatlist","data_replaceitemoflist","data_itemoflist","data_itemnumoflist","data_listcontainsitem","control_wait","control_repeat","control_forever","control_if","control_if_else","control_repeat_until","control_wait_until","control_stop","control_create_clone_of","control_delete_this_clone","event_broadcast","event_broadcastandwait","math_number","math_integer","math_whole_number","text","logic_boolean","logic_null","colour_picker","math_add","math_subtract","math_multiply","math_divide","math_modulo","math_round","math_random","math_single","operator_add","operator_subtract","operator_multiply","operator_divide","operator_mod","operator_round","operator_random","operator_mathop","operator_equals","operator_gt","operator_lt","operator_and","operator_or","operator_not","operator_join","operator_length","operator_contains","operator_letter_of","operator_of","sensing_mousex","sensing_mousey","sensing_mousedown","sensing_keypressed","sensing_timer","sensing_resettimer","sensing_answer","sensing_askandwait","sensing_username","sensing_current","sensing_dayssince2000","sensing_distanceto","sensing_touchingobject","sound_sounds_menu","sound_volume","sound_play","sound_playuntildone","sound_setvolumeto","sound_setvolume","sound_changevolumeby","sound_changevolume","sound_stopallsounds"]);
 
 const keyName = value => ({
   ' ':'space', 'arrowup':'up', 'arrowdown':'down', 'arrowleft':'left',
@@ -65,7 +65,7 @@ export class NativeRuntime {
       x: number(raw.x), y: number(raw.y), direction: number(raw.direction || 90),
       size: number(raw.size || 100), visible: raw.visible !== false,
       draggable: !!raw.draggable, rotationStyle: raw.rotationStyle || 'all around',
-      currentCostume: number(raw.currentCostume), costumes: raw.costumes || [],
+      currentCostume: number(raw.currentCostume), costumes: raw.costumes || [], sounds: raw.sounds || [],
       volume: number(raw.volume ?? 100), layerOrder: number(raw.layerOrder ?? index),
       effects: {...(raw.effects || {})}, clones: [], alive: true, bubble: null,
       timer: 0, touching: Object.create(null), isOriginal: true
@@ -206,6 +206,8 @@ export class NativeRuntime {
       case 'logic_boolean': return this.field(block, 'BOOL') === 'TRUE';
       case 'logic_null': return null;
       case 'colour_picker': return this.field(block, 'COLOUR', '#000000');
+      case 'sound_sounds_menu': return this.field(block,'SOUND_MENU','');
+      case 'sound_volume': return target.volume;
       case 'data_variable': return this.getVariable(target, this.fieldId(block, 'VARIABLE')).value;
       case 'data_listcontents': return this.getList(target, this.fieldId(block, 'LIST')).value.join(' ');
       case 'data_lengthoflist': return this.getList(target, this.fieldId(block, 'LIST')).value.length;
@@ -404,8 +406,14 @@ export class NativeRuntime {
       }
       case 'looks_seteffectto': target.effects[this.field(block,'EFFECT')]=await n('VALUE'); break;
       case 'looks_goforwardbackwardlayers': target.layerOrder += (this.field(block,'FORWARD_BACKWARD')==='forward'?1:-1)*await n('NUM'); break;
-      case 'sound_setvolume': target.volume=await n('VOLUME'); break;
-      case 'sound_changevolume': target.volume+=await n('VOLUME'); break;
+      case 'sound_play': case 'sound_playuntildone': {
+        const name=text(await v('SOUND_MENU'));
+        const playback=this.host.playSound ? this.host.playSound(target,name) : Promise.resolve();
+        if(block.opcode==='sound_playuntildone') await playback;
+        break;
+      }
+      case 'sound_setvolumeto': case 'sound_setvolume': target.volume=clamp(await n('VOLUME'),0,100); break;
+      case 'sound_changevolumeby': case 'sound_changevolume': target.volume=clamp(target.volume+await n('VOLUME'),0,100); break;
       case 'sound_stopallsounds': this.host.stopAllSounds?.(); break;
       case 'sensing_resettimer': this.startedAt=performance.now(); break;
       case 'sensing_askandwait': this.answer = await (this.host.ask ? this.host.ask(text(await v('QUESTION'))) : (typeof prompt === 'function' ? prompt(text(await v('QUESTION'))) : '')); break;
