@@ -79,7 +79,7 @@ export const createNativeHTML = (project, title = 'Scratch project') => {
   canvas.addEventListener('pointermove',e=>{const r=canvas.getBoundingClientRect();input.mouseX=(e.clientX-r.left-r.width/2)*480/r.width;input.mouseY=-(e.clientY-r.top-r.height/2)*360/r.height;});
   canvas.addEventListener('pointerdown',()=>{input.mouseDown=true;runTrigger('stage-click');sprites.forEach(s=>{const dx=input.mouseX-s.x,dy=input.mouseY-s.y;if(Math.hypot(dx,dy)<28)s.scripts.filter(x=>x.trigger.type==='click').forEach(x=>launch(s,x));});});
   addEventListener('pointerup',()=>input.mouseDown=false);
-  addEventListener('keydown',e=>{input.keys.add(e.key.toLowerCase());sprites.forEach(s=>s.scripts.filter(x=>x.trigger.type==='key'&&x.trigger.key===e.key.toLowerCase()).forEach(x=>launch(s,x)));});
+  addEventListener('keydown',e=>{const key=e.key.toLowerCase();input.keys.add(key);(stage.scripts||[]).filter(x=>x.trigger.type==='key'&&x.trigger.key===key).forEach(x=>launch(stage,x));sprites.forEach(s=>s.scripts.filter(x=>x.trigger.type==='key'&&x.trigger.key===key).forEach(x=>launch(s,x)));});
   addEventListener('keyup',e=>input.keys.delete(e.key.toLowerCase()));
   document.querySelector('#flag').addEventListener('click',()=>{sprites.forEach(s=>{s.x=Number(s.x)||0;s.y=Number(s.y)||0;s.running=true;});runTrigger('flag');});
   const draw = () => {
