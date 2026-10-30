@@ -57,6 +57,28 @@ describe('native Scratch compiler', () => {
     expect(() => new Function('api', 'input', 'return (async()=>{' + result.sprites[0].scripts[0].code + '})()')).not.toThrow();
   });
 
+
+  test('compiles broadcasts and variable reporters', () => {
+    const project = {
+      targets: [{
+        name: 'Sprite1',
+        variables: {score: ['score', 0]},
+        blocks: {
+          flag: block('event_whenflagclicked', 'set', {}, {}, true),
+          set: block('data_setvariableto', 'broadcast', {
+            VALUE: [1, [4, '5']]
+          }, {VARIABLE: ['score', 'score-id']}),
+          broadcast: block('event_broadcast', null, {
+            BROADCAST_INPUT: [1, [11, 'done', 'broadcast-id']]
+          })
+        }
+      }]
+    };
+    const result = compileNativeProject(project);
+    expect(result.sprites[0].scripts[0].code).toContain('api.setVar("score",5)');
+    expect(result.sprites[0].scripts[0].code).toContain('api.broadcast("done")');
+  });
+
   test('rejects malformed project data', () => {
     expect(() => compileNativeProject({})).toThrow('targets are missing');
   });
