@@ -47,6 +47,8 @@ export const createNativeHTML = (project, title = 'Scratch project') => {
     goto(x,y){sprite.x=Number(x)||0;sprite.y=Number(y)||0;},
     turn(d){sprite.direction=(sprite.direction+(Number(d)||0))%360;},
     async move(steps){const a=sprite.direction*Math.PI/180;sprite.x+=Math.sin(a)*Number(steps);sprite.y+=Math.cos(a)*Number(steps);await this.yield();},
+    glide(seconds,x,y){const duration=Math.max(0,Number(seconds)||0)*1000,sx=sprite.x,sy=sprite.y,tx=Number(x)||0,ty=Number(y)||0,start=performance.now();return new Promise(resolve=>{const frame=now=>{const t=duration?Math.min(1,(now-start)/duration):1;sprite.x=sx+(tx-sx)*t;sprite.y=sy+(ty-sy)*t;if(t<1)requestAnimationFrame(frame);else resolve();};requestAnimationFrame(frame);});},
+    bounce(){let dx=Math.sin(sprite.direction*Math.PI/180),dy=Math.cos(sprite.direction*Math.PI/180);if(sprite.x>220||sprite.x< -220)dx=-dx;if(sprite.y>160||sprite.y< -160)dy=-dy;sprite.x=Math.max(-230,Math.min(230,sprite.x));sprite.y=Math.max(-170,Math.min(170,sprite.y));sprite.direction=Math.atan2(dx,dy)*180/Math.PI;},
     say(text){sprite.bubble=String(text);sprite.bubbleUntil=Infinity;},
     async sayFor(text,seconds){this.say(text);await sleep(Math.max(0,Number(seconds)||0)*1000);sprite.bubble='';},
     wait(seconds){return sleep(Math.max(0,Number(seconds)||0)*1000);},
