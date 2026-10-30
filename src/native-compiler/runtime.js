@@ -166,6 +166,11 @@ export class NativeRuntime {
     return block.fields?.[name]?.[0] ?? fallback;
   }
 
+  fieldId(block, name, fallback = '') {
+    const field = block.fields?.[name];
+    return Array.isArray(field) ? (field[1] || field[0] || fallback) : fallback;
+  }
+
   async evaluate(target, block, thread, depth = 0) {
     if (!block || depth > 80 || thread.cancelled) return 0;
     const v = name => this.value(target, block, name, thread, depth + 1);
@@ -331,12 +336,12 @@ export class NativeRuntime {
       case 'sound_setvolume': target.volume=await n('VOLUME'); break;
       case 'sound_changevolume': target.volume+=await n('VOLUME'); break;
       case 'sound_stopallsounds': this.host.stopAllSounds?.(); break;
-      case 'data_setvariableto': this.setVariable(target,this.field(block,'VARIABLE'),await v('VALUE')); break;
+      case 'data_setvariableto': this.setVariable(target,this.fieldId(block,'VARIABLE'),await v('VALUE')); break;
       case 'data_changevariableby': {
         const id=this.field(block,'VARIABLE'), current=this.getVariable(target,id).value;
         this.setVariable(target,id,number(current)+await n('VALUE')); break;
       }
-      case 'data_addtolist': this.getList(target,this.field(block,'LIST')).value.push(await v('ITEM')); break;
+      case 'data_addtolist': this.getList(target,this.fieldId(block,'LIST')).value.push(await v('ITEM')); break;
       case 'data_deleteoflist': {
         const list=this.getList(target,this.field(block,'LIST')).value, index=this.listIndex(await v('INDEX'),list.length);
         if (index>=0) list.splice(index,1); break;
