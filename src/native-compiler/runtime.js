@@ -248,7 +248,6 @@ export class NativeRuntime {
         if (!other) return 0;
         return ({xposition:other.x, yposition:other.y, direction:other.direction, costume:other.currentCostume + 1, size:other.size, volume:other.volume})[property] ?? 0;
       }
-      case 'sensing_resettimer': this.startedAt=performance.now(); return 0;
       case 'sensing_touchingobject': {
         const who=text(await a('TOUCHINGOBJECTMENU'));
         if(who==='_mouse_') return this.host.hitTest ? this.host.hitTest(target,this.mouse.x,this.mouse.y) : false;
@@ -376,6 +375,8 @@ export class NativeRuntime {
       case 'sound_setvolume': target.volume=await n('VOLUME'); break;
       case 'sound_changevolume': target.volume+=await n('VOLUME'); break;
       case 'sound_stopallsounds': this.host.stopAllSounds?.(); break;
+      case 'sensing_resettimer': this.startedAt=performance.now(); break;
+      case 'sensing_askandwait': this.answer = await (this.host.ask ? this.host.ask(text(await v('QUESTION'))) : (typeof prompt === 'function' ? prompt(text(await v('QUESTION'))) : '')); break;
       case 'data_setvariableto': this.setVariable(target,this.fieldId(block,'VARIABLE'),await v('VALUE')); break;
       case 'data_changevariableby': {
         const id=this.field(block,'VARIABLE'), current=this.getVariable(target,id).value;
@@ -407,10 +408,10 @@ export class NativeRuntime {
       case 'control_if': if(truthy(await v('CONDITION'))) await this.substack(target,block,'SUBSTACK',thread); break;
       case 'control_if_else': await this.substack(target,block,truthy(await v('CONDITION'))?'SUBSTACK':'SUBSTACK2',thread); break;
       case 'control_repeat_until':
-        while(this.running && !thread.cancelled && !truthy(await v('CONDITION'))){await this.substack(target,block,'SUBSTACK',thread);await this.yield();}
+        while(this.running && !thread.cancelled && !truthy(await v('CONDITION'))){await this.substack(target,block,'SUBSTACK',thread);await new Promise(resolve=>setTimeout(resolve,16));}
         break;
       case 'control_wait_until':
-        while(this.running && !thread.cancelled && !truthy(await v('CONDITION'))) await this.yield();
+        while(this.running && !thread.cancelled && !truthy(await v('CONDITION'))) await new Promise(resolve=>setTimeout(resolve,16));
         break;
       case 'control_stop': {
         const option=this.field(block,'STOP_OPTION','all');
