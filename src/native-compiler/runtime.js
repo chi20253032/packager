@@ -451,7 +451,7 @@ export class NativeRuntime {
       case 'pen_clear': case 'pen_eraseAll': this.host.penClear?.(); break;
       case 'pen_penDown': target.penDown=true; break;
       case 'pen_penUp': target.penDown=false; break;
-      case 'pen_setPenColorToColor': target.penColor=NativeRuntime.text(await v('COLOR')); break;
+      case 'pen_setPenColorToColor': target.penColor=this.constructor.text(await v('COLOR')); break;
       case 'pen_setPenSizeTo': target.penSize=this.constructor.clamp(await n('SIZE'),0,100); break;
       case 'pen_changePenSizeBy': target.penSize=this.constructor.clamp(target.penSize+await n('SIZE'),0,100); break;
       case 'pen_stamp': this.host.penStamp?.(target); break;
