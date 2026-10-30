@@ -95,6 +95,12 @@ inlineScaffolding += '<script>\n' +
   '}\n' +
   '</script>';
 
+const firstBundleTag = html.search(/<script\b[^>]*\bsrc\s*=/i);
+if (firstBundleTag < 0) {
+  throw new Error('Cannot locate the first JavaScript bundle tag.');
+}
+html = html.slice(0, firstBundleTag) + inlineScaffolding + '\n' + html.slice(firstBundleTag);
+
 let inlinedScripts = 0;
 html = html.replace(/<script\b([^>]*?)\bsrc=(["'])([^"']+)\2([^>]*)>\s*<\/script>/gi, (_match, before, _quote, src, after) => {
   const script = readAsset(src, 'JavaScript bundle');
@@ -121,12 +127,6 @@ html = html.replace(/<link\b([^>]*)>/gi, (match, attributes) => {
 });
 
 html = html.replace(/<\/head>/i, '<style id="p4-standalone-mobile">' + mobileCSS + '</style>\n</head>');
-
-const firstBundleTag = html.search(/<script\b[^>]*\bsrc\s*=/i);
-if (firstBundleTag < 0) {
-  throw new Error('Cannot locate the first JavaScript bundle tag.');
-}
-html = html.slice(0, firstBundleTag) + inlineScaffolding + '\n' + html.slice(firstBundleTag);
 
 const faviconPath = pathUtil.join(__dirname, '../../static/favicon.ico');
 if (fs.existsSync(faviconPath)) {
