@@ -9,11 +9,20 @@ const escapeHTML = value => String(value).replace(/[&<>"']/g, character => ({
  * Create a standalone player driven by the independent native SB3 interpreter.
  * No Scratch VM, Scratch Player, renderer, audio engine, or scaffold is loaded.
  */
-export const createNativeHTML = (project, title = 'Scratch project') => {
+export const createNativeHTML = (project, title = 'Scratch project', options = {}) => {
   if (!project || !Array.isArray(project.targets)) {
     throw new Error('Invalid SB3 project: targets are missing.');
   }
-  const projectJSON = safe(project);
+  const nativeOptions = {
+    turbo: !!options.turbo, framerate: options.framerate ?? 30,
+    maxClones: options.maxClones === Infinity ? null : (options.maxClones ?? 300),
+    fencing: options.fencing !== false, miscLimits: options.miscLimits !== false,
+    stageWidth: options.stageWidth ?? 480, stageHeight: options.stageHeight ?? 360,
+    resizeMode: options.resizeMode || 'preserve-ratio', username: options.username || 'player####',
+    autoplay: !!options.autoplay, appearance: options.appearance || {},
+    custom: options.custom || {}
+  };
+  const projectJSON = safe({...project, nativeOptions});
   const runtimeSource = getNativeRuntimeSource();
   const source = `
 (() => {
@@ -42,8 +51,8 @@ export const createNativeHTML = (project, title = 'Scratch project') => {
 
   let runtime;
   let dpr = 1;
-  const stageWidth = 480;
-  const stageHeight = 360;
+  const stageWidth = Number(project.nativeOptions.stageWidth) || 480;
+  const stageHeight = Number(project.nativeOptions.stageHeight) || 360;
   const resize = () => {
     const rect = canvas.getBoundingClientRect();
     dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -158,12 +167,15 @@ export const createNativeHTML = (project, title = 'Scratch project') => {
     context.setTransform(dpr, 0, 0, dpr, 0, 0);
     context.fillStyle = '#202536';
     context.fillRect(0, 0, width, height);
-    const scale = Math.min(width / stageWidth, height / stageHeight);
-    const left = (width - stageWidth * scale) / 2;
-    const top = (height - stageHeight * scale) / 2;
+    const scaleX = width / stageWidth, scaleY = height / stageHeight;
+    const scale = project.nativeOptions.resizeMode === 'stretch' ? null : Math.min(scaleX, scaleY);
+    const drawScaleX = scale === null ? scaleX : scale;
+    const drawScaleY = scale === null ? scaleY : scale;
+    const left = (width - stageWidth * drawScaleX) / 2;
+    const top = (height - stageHeight * drawScaleY) / 2;
     context.save();
     context.translate(left, top);
-    context.scale(scale, scale);
+    context.scale(drawScaleX, drawScaleY);
     context.fillStyle = '#fff';
     context.fillRect(0, 0, stageWidth, stageHeight);
     const stage = runtime && runtime.stage;
@@ -238,6 +250,9 @@ export const createNativeHTML = (project, title = 'Scratch project') => {
   });
   if ('ResizeObserver' in window) new ResizeObserver(resize).observe(canvas);
   else window.addEventListener('resize', resize);
+  canvas.style.aspectRatio = stageWidth + ' / ' + stageHeight;
+  canvas.style.maxWidth = 'calc((100dvh - 82px) * ' + (stageWidth / stageHeight) + ')';
+  if (project.nativeOptions.appearance && project.nativeOptions.appearance.background) document.body.style.background = project.nativeOptions.appearance.background;
   resize();
   document.getElementById('project-name').textContent = project.projectName || 'Scratch project';
   draw();
@@ -252,6 +267,11 @@ export const createNativeHTML = (project, title = 'Scratch project') => {
   if (unsupported.size) {
     warning.hidden = false;
     warning.textContent = '未対応ブロック: ' + Array.from(unsupported).sort().join(' / ');
+  }
+  if (project.nativeOptions.autoplay) runtime.start();
+  if (project.nativeOptions.custom && project.nativeOptions.custom.js) {
+    try { (new Function('runtime', 'project', project.nativeOptions.custom.js))(runtime, project); }
+    catch (error) { warning.hidden = false; warning.textContent = 'カスタムJavaScriptエラー: ' + error.message; }
   }
 })();
 `;
@@ -274,9 +294,10 @@ header{height:58px;flex:0 0 58px;display:flex;align-items:center;gap:10px;paddin
 button{border:0;border-radius:12px;min-height:42px;padding:9px 15px;background:#4c97ff;color:white;font:inherit;font-weight:750;touch-action:manipulation}
 button.secondary{background:#39445e}
 main{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:8px}
-#stage{width:100%;height:100%;max-width:calc((100dvh - 82px)*4/3);max-height:100%;aspect-ratio:4/3;object-fit:contain;background:#202536;border-radius:12px;touch-action:none;box-shadow:0 16px 50px #0005}
+#stage{width:100%;height:100%;max-width:100%;max-height:100%;aspect-ratio:4/3;object-fit:contain;background:#202536;border-radius:12px;touch-action:none;box-shadow:0 16px 50px #0005}
 #warning{position:fixed;left:10px;right:10px;bottom:max(10px,env(safe-area-inset-bottom));max-height:30vh;overflow:auto;padding:12px 14px;border:1px solid #d69a43;border-radius:12px;background:#3d2c19;color:#ffe1b1;line-height:1.5;white-space:pre-wrap}
 [hidden]{display:none!important}
+${options.custom && options.custom.css ? '<style>' + options.custom.css.replace(/<\\/style/gi, '<\\\\/style') + '</style>' : ''}
 @media(max-width:520px){header{height:54px;flex-basis:54px;padding:6px 8px;gap:6px}.brand{display:none}button{padding:8px 11px;min-height:42px}main{padding:4px}#stage{border-radius:8px}}
 </style>
 </head>
