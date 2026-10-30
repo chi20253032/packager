@@ -68,6 +68,53 @@ export const createNativeHTML = (project, title = 'Scratch project') => {
     const height = image && image.naturalHeight ? image.naturalHeight * scale : 42 * scale;
     return Math.abs(x - target.x) <= width / 2 && Math.abs(y - target.y) <= height / 2;
   };
+  let audioContext = null;
+  const audioBuffers = new Map();
+  const playingSources = new Set();
+  const getAudioContext = () => {
+    if (!audioContext) {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (AudioContextClass) audioContext = new AudioContextClass();
+    }
+    return audioContext;
+  };
+  const playSound = async (target, soundName) => {
+    try {
+      const sound = (target.sounds || []).find(item => item.name === soundName) || (target.sounds || [])[0];
+      if (!sound) return;
+      const asset = sound.md5ext || (sound.assetId && (sound.assetId + '.' + (sound.dataFormat || sound.format)));
+      const encoded = asset && project.nativeAssets && project.nativeAssets[asset];
+      if (!encoded) return;
+      const audio = getAudioContext();
+      if (!audio) return;
+      if (!audioBuffers.has(asset)) {
+        const binary = atob(encoded);
+        const bytes = new Uint8Array(binary.length);
+        for (let i=0;i<binary.length;i++) bytes[i] = binary.charCodeAt(i);
+        audioBuffers.set(asset, audio.decodeAudioData(bytes.buffer));
+      }
+      const buffer = await audioBuffers.get(asset);
+      await audio.resume();
+      const source = audio.createBufferSource();
+      const gain = audio.createGain();
+      gain.gain.value = Math.max(0, Math.min(1, (target.volume ?? 100) / 100));
+      source.buffer = buffer;
+      source.connect(gain);
+      gain.connect(audio.destination);
+      playingSources.add(source);
+      source.onended = () => playingSources.delete(source);
+      source.start(0);
+      return new Promise(resolve => { source.onended = () => { playingSources.delete(source); resolve(); }; });
+    } catch (error) {
+      console.warn('Native audio playback failed:', error);
+    }
+  };
+  const stopAllSounds = () => {
+    for (const source of playingSources) {
+      try { source.stop(); } catch (error) { /* already stopped */ }
+    }
+    playingSources.clear();
+  };
 
   const drawTarget = target => {
     if (!target.visible || !target.alive) return;
@@ -152,6 +199,8 @@ export const createNativeHTML = (project, title = 'Scratch project') => {
       warning.textContent = '未対応ブロック: ' + current.join(' / ');
     },
     hitTest,
+    playSound,
+    stopAllSounds,
     ask(question) { return Promise.resolve(window.prompt(question) || ''); }
   });
 
@@ -160,6 +209,8 @@ export const createNativeHTML = (project, title = 'Scratch project') => {
   start.addEventListener('click', () => {
     warning.hidden = true;
     warning.textContent = '';
+    const audio = getAudioContext();
+    if (audio) audio.resume();
     runtime.start();
   });
   stop.addEventListener('click', () => runtime.stopAll());
