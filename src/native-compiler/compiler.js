@@ -162,9 +162,12 @@ export const compileNativeProject = (project) => {
 
 export const NATIVE_COMPILER_SUPPORTED = [
   'event_whenflagclicked','event_whenkeypressed','event_whenthisspriteclicked','event_whenstageclicked',
+  'event_whenbroadcastreceived','event_broadcast','event_broadcastandwait',
   'motion_movesteps','motion_turnright','motion_turnleft','motion_gotoxy','motion_setx','motion_sety',
-  'motion_changexby','motion_changeyby','motion_pointindirection','looks_show','looks_hide','looks_say',
-  'looks_sayforsecs','control_wait','control_repeat','control_forever','control_if','control_if_else','control_stop',
+  'motion_changexby','motion_changeyby','motion_pointindirection',
+  'looks_show','looks_hide','looks_nextcostume','looks_switchcostumeto','looks_say','looks_sayforsecs',
+  'data_variable','data_setvariableto','data_changevariableby',
+  'control_wait','control_repeat','control_forever','control_if','control_if_else','control_stop',
   'math_number','text','math_positive','math_negative','math_add','math_subtract','math_multiply','math_divide',
   'operator_equals','operator_gt','operator_lt','operator_and','operator_or','operator_not','operator_join',
   'operator_random','sensing_mousex','sensing_mousey','sensing_mousedown','sensing_keypressed'
