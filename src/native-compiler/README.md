@@ -10,11 +10,12 @@ This is an early compiler milestone, not yet a complete Scratch implementation. 
 - Show/hide and say/say-for-seconds
 - Wait, repeat, forever, if, if/else, and stop
 - Core arithmetic, comparisons, boolean operators, join, random, mouse and keyboard reporters
-- First costume rendering
+- Embedded sprite and stage costume rendering (first costume)
+- Per-sprite variables, variable set/change, costume switching, and broadcast/broadcast-and-wait
 
 Unsupported opcodes are collected during compilation and displayed in the exported HTML. They are not silently interpreted as successful operations.
 
-Not implemented yet: costume switching/effects, clones, broadcasts, variables/lists, sound/music, pen, sensing/collision, extensions, monitors, cloud variables, and full Scratch scheduling/edge-case semantics. The regular HTML export remains the compatibility choice for projects that depend on these features.
+Not implemented yet: costume effects, clones, lists, sound/music, pen, sensing/collision, extensions, monitors, cloud variables, and full Scratch scheduling/edge-case semantics. The regular HTML export remains the compatibility choice for projects that depend on these features.
 
 ## Architecture
 
