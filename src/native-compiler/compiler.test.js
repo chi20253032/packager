@@ -32,12 +32,12 @@ describe('native Scratch compiler', () => {
         name: 'Sprite1',
         blocks: {
           flag: block('event_whenflagclicked', 'extension', {}, {}, true),
-          extension: block('motion_glidesecstoxy')
+          extension: block('motion_setrotationstyle')
         }
       }]
     };
     const result = compileNativeProject(project);
-    expect(result.unsupportedOpcodes).toContain('motion_glidesecstoxy');
+    expect(result.unsupportedOpcodes).toContain('motion_setrotationstyle');
   });
 
   test('emits syntactically valid async JavaScript for nested control flow', () => {
