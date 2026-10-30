@@ -47,7 +47,7 @@ export const createNativeHTML = (project, title = 'Scratch project') => {
     try { (new Function('api','input','return (async()=>{'+script.code+'})()'))(api,input); }
     catch(error){console.error('Native script error:',error);}
   };
-  const runTrigger = type => sprites.forEach(sprite => sprite.scripts.filter(s=>s.trigger.type===type).forEach(s=>launch(sprite,s)));
+  const runTrigger = type => project.sprites.forEach(sprite => (sprite.scripts || []).filter(s=>s.trigger.type===type).forEach(s=>launch(sprite,s)));
   const resize = () => {const dpr=Math.min(devicePixelRatio||1,2);canvas.width=Math.round(innerWidth*dpr);canvas.height=Math.round(innerHeight*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);};
   addEventListener('resize',resize);resize();
   canvas.addEventListener('pointermove',e=>{const r=canvas.getBoundingClientRect();input.mouseX=(e.clientX-r.left-r.width/2)*480/r.width;input.mouseY=-(e.clientY-r.top-r.height/2)*360/r.height;});
