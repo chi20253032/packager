@@ -230,7 +230,12 @@ export class NativeRuntime {
           asin:x=>Math.asin(x)*180/Math.PI, acos:x=>Math.acos(x)*180/Math.PI, atan:x=>Math.atan(x)*180/Math.PI}[op];
         return f ? f(n) : 0;
       }
-      case 'operator_equals': return text(await a('OPERAND1')).toLowerCase() === text(await a('OPERAND2')).toLowerCase();
+      case 'operator_equals': {
+        const left=await a('OPERAND1'), right=await a('OPERAND2');
+        const leftNumber=Number(left), rightNumber=Number(right);
+        if(text(left).trim()!=='' && text(right).trim()!=='' && Number.isFinite(leftNumber) && Number.isFinite(rightNumber)) return leftNumber===rightNumber;
+        return text(left).toLowerCase()===text(right).toLowerCase();
+      }
       case 'operator_gt': return number(await a('OPERAND1')) > number(await a('OPERAND2'));
       case 'operator_lt': return number(await a('OPERAND1')) < number(await a('OPERAND2'));
       case 'operator_and': return truthy(await a('OPERAND1')) && truthy(await a('OPERAND2'));
@@ -240,11 +245,11 @@ export class NativeRuntime {
       case 'operator_length': return text(await a('STRING')).length;
       case 'operator_contains': return text(await a('STRING1')).toLowerCase().includes(text(await a('STRING2')).toLowerCase());
       case 'operator_letter_of': {
-        const str = text(await a('STRING')), index = Math.floor(number(await a('LETTER'))) - 1;
+        const str = Array.from(text(await a('STRING'))), index = Math.floor(number(await a('LETTER'))) - 1;
         return str[index] || '';
       }
       case 'operator_of': {
-        const property = this.field(block, 'PROPERTY');
+        const property = this.field(block, 'PROPERTY').toLowerCase().replace(/[\\s_]/g,'');
         const object = text(await a('OBJECT'));
         const other = this.targets.find(item => item.name === object);
         if (!other) return 0;
@@ -257,6 +262,11 @@ export class NativeRuntime {
         const other=this.targets.find(item=>item.name===who);
         return !!other && other!==target && Math.hypot(target.x-other.x,target.y-other.y)<42;
       }
+      case 'motion_xposition': return target.x;
+      case 'motion_yposition': return target.y;
+      case 'motion_direction': return target.direction;
+      case 'looks_size': return target.size;
+      case 'looks_costumenumbername': return this.field(block,'NUMBER_NAME')==='name' ? (target.costumes[target.currentCostume]?.name || '') : target.currentCostume+1;
       case 'sensing_mousex': return this.mouse.x;
       case 'sensing_mousey': return this.mouse.y;
       case 'sensing_mousedown': return this.mouse.down;
@@ -266,7 +276,7 @@ export class NativeRuntime {
       case 'sensing_username': return this.username || 'player';
       case 'sensing_current': {
         const d = new Date(), unit = this.field(block, 'CURRENTMENU');
-        return ({YEAR:d.getFullYear(), MONTH:d.getMonth()+1, DATE:d.getDate(), DAYOFWEEK:(d.getDay()+6)%7+1, HOUR:d.getHours(), MINUTE:d.getMinutes(), SECOND:d.getSeconds()})[unit] ?? 0;
+        return ({YEAR:d.getFullYear(), MONTH:d.getMonth()+1, DATE:d.getDate(), DAYOFWEEK:d.getDay()+1, HOUR:d.getHours(), MINUTE:d.getMinutes(), SECOND:d.getSeconds()})[unit] ?? 0;
       }
       case 'sensing_dayssince2000': return (Date.now() - Date.UTC(2000,0,1)) / 86400000;
       case 'sensing_distanceto': {
@@ -342,18 +352,36 @@ export class NativeRuntime {
         if (x!==undefined) target.direction=Math.atan2(x-target.x,y-target.y)*180/Math.PI;
         break;
       }
-      case 'motion_ifonedgebounce': this.host.bounce?.(target); break;
+      case 'motion_ifonedgebounce': {
+        let dx=Math.sin(target.direction*Math.PI/180),dy=Math.cos(target.direction*Math.PI/180);
+        if(target.x>220||target.x< -220)dx=-dx;
+        if(target.y>160||target.y< -160)dy=-dy;
+        target.x=clamp(target.x,-230,230);target.y=clamp(target.y,-170,170);
+        target.direction=Math.atan2(dx,dy)*180/Math.PI;
+        break;
+      }
       case 'looks_show': target.visible=true; break;
       case 'looks_hide': target.visible=false; break;
       case 'looks_setsizeto': target.size=await n('SIZE'); break;
       case 'looks_changesizeby': target.size+=await n('CHANGE'); break;
       case 'looks_nextcostume': target.currentCostume=(target.currentCostume+1)%Math.max(1,target.costumes.length); break;
       case 'looks_switchbackdropto': case 'looks_switchbackdroptoandwait': {
-        if (target.isStage) { const name=text(await v('BACKDROP')); const index=target.costumes.findIndex(costume=>costume.name===name); if(index>=0)target.currentCostume=index; }
-        if(block.opcode.endsWith('andwait')) await this.broadcast('backdrop');
+        if (target.isStage) {
+          const name=text(await v('BACKDROP')), index=target.costumes.findIndex(costume=>costume.name===name);
+          if(index>=0) target.currentCostume=index;
+          const jobs=[];
+          for(const sprite of this.targets) for(const hat of Object.values(sprite.blocks)) {
+            if(hat?.topLevel && hat.opcode==='event_whenbackdropswitchesto' && text(hat.fields?.BACKDROP?.[0])===name) jobs.push(this.launch(sprite,hat));
+          }
+          if(block.opcode.endsWith('andwait')) await Promise.all(jobs);
+        }
         break;
       }
-      case 'looks_nextbackdrop': if(target.isStage)target.currentCostume=(target.currentCostume+1)%Math.max(1,target.costumes.length); break;
+      case 'looks_nextbackdrop': if(target.isStage) {
+        target.currentCostume=(target.currentCostume+1)%Math.max(1,target.costumes.length);
+        const name=target.costumes[target.currentCostume]?.name;
+        for(const sprite of this.targets) for(const hat of Object.values(sprite.blocks)) if(hat?.topLevel&&hat.opcode==='event_whenbackdropswitchesto'&&text(hat.fields?.BACKDROP?.[0])===name)this.launch(sprite,hat);
+      } break;
       case 'looks_gotofrontback': target.layerOrder= this.field(block,'FRONT_BACK')==='front'?Math.max(...this.targets.map(t=>t.layerOrder))+1:Math.min(...this.targets.map(t=>t.layerOrder))-1; break;
       case 'looks_switchcostumeto': {
         const name=text(await v('COSTUME')), index=target.costumes.findIndex(c=>c.name===name);
@@ -445,7 +473,7 @@ export class NativeRuntime {
 
   listIndex(value, length, allowEnd = false) {
     const s=text(value).toLowerCase();
-    if(s==='last') return length-1;
+    if(s==='last') return allowEnd?length:length-1;
     if(s==='random'||s==='any') return length?Math.floor(Math.random()*length):0;
     const n=Math.floor(number(value))-1;
     return allowEnd?clamp(n,0,length):n>=0&&n<length?n:-1;
