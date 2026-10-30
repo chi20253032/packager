@@ -28,6 +28,14 @@ export const createNativeHTML = (project, title = 'Scratch project') => {
   }));
   const stage = project.sprites.find(s => s.isStage) || {name:'Stage', scripts:[]};
   stage.running = true;
+  stage.images = (stage.costumes || []).map(costume => {
+    const encoded=project.assets[costume.asset];
+    if(!encoded)return null;
+    const ext=(costume.asset.split('.').pop()||'png').toLowerCase();
+    const mime=ext==='svg'?'image/svg+xml':ext==='jpg'||ext==='jpeg'?'image/jpeg':'image/png';
+    const image=new Image();image.src='data:'+mime+';base64,'+encoded;
+    return image;
+  }).filter(Boolean);
   let running = true;
   const sleep = ms => new Promise(resolve => setTimeout(resolve, Math.max(0,ms)));
   const apiFor = sprite => ({
@@ -76,6 +84,7 @@ export const createNativeHTML = (project, title = 'Scratch project') => {
     const w=innerWidth,h=innerHeight;ctx.clearRect(0,0,w,h);ctx.fillStyle='#171923';ctx.fillRect(0,0,w,h);
     ctx.save();ctx.translate(w/2,h/2);ctx.scale(w/480,h/360);
     ctx.fillStyle='#fff';ctx.fillRect(-240,-180,480,360);
+    if(stage.images[0]&&stage.images[0].complete&&stage.images[0].naturalWidth)ctx.drawImage(stage.images[0],-240,-180,480,360);
     for(const s of sprites){if(!s.visible)continue;ctx.save();ctx.translate(s.x,-s.y);ctx.rotate((s.direction-90)*Math.PI/180);ctx.scale(s.size/100,s.size/100);
       const costume=s.images[s.costumeIndex]||s.images[0];
       if(costume&&costume.image.complete&&costume.image.naturalWidth){const im=costume.image,c=costume.costume;ctx.drawImage(im,-(c.rotationCenterX||im.naturalWidth/2),-(c.rotationCenterY||im.naturalHeight/2));}
