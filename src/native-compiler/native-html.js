@@ -32,10 +32,6 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
 
   const canvas = document.getElementById('stage');
   const context = canvas.getContext('2d', {alpha:false});
-  const penCanvas = document.createElement('canvas');
-  penCanvas.width = stageWidth;
-  penCanvas.height = stageHeight;
-  const penContext = penCanvas.getContext('2d');
   const warning = document.getElementById('warning');
   const status = document.getElementById('status');
   const images = new Map();
@@ -57,6 +53,10 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
   let dpr = 1;
   const stageWidth = Number(project.nativeOptions.stageWidth) || 480;
   const stageHeight = Number(project.nativeOptions.stageHeight) || 360;
+  const penCanvas = document.createElement('canvas');
+  penCanvas.width = Math.ceil(stageWidth);
+  penCanvas.height = Math.ceil(stageHeight);
+  const penContext = penCanvas.getContext('2d');
   const resize = () => {
     const rect = canvas.getBoundingClientRect();
     dpr = Math.min(window.devicePixelRatio || 1, 2);
