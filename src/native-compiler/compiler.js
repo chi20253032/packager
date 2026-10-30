@@ -123,7 +123,7 @@ const compileStack = (blocks, firstId, diagnostics, depth = 0) => {
       case 'control_forever': output += `while(api.running){\n${substack('SUBSTACK')}\nawait api.yield();\n}\n`; break;
       case 'control_if': output += `if(${value('CONDITION')}){\n${substack('SUBSTACK')}\n}\n`; break;
       case 'control_if_else': output += `if(${value('CONDITION')}){\n${substack('SUBSTACK')}\n}else{\n${substack('SUBSTACK2')}\n}\n`; break;
-      case 'control_stop': output += 'api.running=false;return;\n'; break;
+      case 'control_stop': output += getField(block,'STOP_OPTION','all') === 'all' ? 'api.stopAll();return;\n' : 'api.stopSprite();return;\n'; break;
       case 'event_whenflagclicked':
       case 'event_whenkeypressed':
       case 'event_whenthisspriteclicked':
