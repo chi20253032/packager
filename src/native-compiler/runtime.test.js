@@ -49,6 +49,38 @@ describe('native runtime v2',()=>{
     runtime.stopAll();
   });
 
+  test('supports native arithmetic reporters and resets project state on restart',async()=>{
+    const project=makeProject({
+      flag:makeBlock('event_whenflagclicked','set',{}, {},true),
+      set:makeBlock('data_setvariableto','move',{VALUE:[2,'subtract']},{VARIABLE:['score','score']}),
+      subtract:makeBlock('operator_subtract',null,{NUM1:[1,[4,'9']],NUM2:[1,[4,'4']]})
+    });
+    const runtime=new NativeRuntime(project);
+    runtime.start();
+    await new Promise(resolve=>setTimeout(resolve,5));
+    expect(runtime.sprites[0].variables.score.value).toBe(5);
+    runtime.sprites[0].x=123;
+    runtime.start();
+    await new Promise(resolve=>setTimeout(resolve,5));
+    expect(runtime.sprites[0].x).toBe(0);
+    expect(runtime.sprites[0].variables.score.value).toBe(5);
+    runtime.stopAll();
+  });
+
+  test('routes native sound blocks to the Web Audio host adapter',async()=>{
+    const played=[];
+    const project=makeProject({
+      flag:makeBlock('event_whenflagclicked','play',{}, {},true),
+      play:makeBlock('sound_playuntildone',null,{SOUND_MENU:[1,'menu']}),
+      menu:makeBlock('sound_sounds_menu',null,{}, {SOUND_MENU:['meow','sound-id']})
+    });
+    const runtime=new NativeRuntime(project,{playSound:async(_target,name)=>played.push(name)});
+    runtime.start();
+    await new Promise(resolve=>setTimeout(resolve,5));
+    expect(played).toContain('meow');
+    runtime.stopAll();
+  });
+
   test('reports unsupported extension opcodes to host instead of silently pretending',async()=>{
     const unsupported=[];
     const project=makeProject({flag:makeBlock('event_whenflagclicked','custom',{}, {},true),custom:makeBlock('extension_example_custom')});
