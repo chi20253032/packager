@@ -21,8 +21,8 @@ describe('native runtime v2',()=>{
   test('supports lists and repeat/if control flow',async()=>{
     const project=makeProject({
       flag:makeBlock('event_whenflagclicked','repeat',{}, {},true),
-      repeat:makeBlock('control_repeat','condition',{TIMES:[1,[4,'3']],SUBSTACK:[2,'add']}),
-      add:makeBlock('data_addtolist','condition2',{ITEM:[1,[10,'x']]},{LIST:['items','items']}),
+      repeat:makeBlock('control_repeat',null,{TIMES:[1,[4,'3']],SUBSTACK:[2,'add']}),
+      add:makeBlock('data_addtolist','change',{ITEM:[1,[10,'x']]},{LIST:['items','items']}),
       condition:makeBlock('control_if',null,{CONDITION:[2,'equals'],SUBSTACK:[2,'change']}),
       equals:makeBlock('operator_equals',null,{OPERAND1:[1,[10,'yes']],OPERAND2:[1,[10,'yes']]}),
       change:makeBlock('data_changevariableby',null,{VALUE:[1,[4,'1']]},{VARIABLE:['score','score']})
