@@ -56,13 +56,13 @@ const compileExpression = (blocks, block, depth = 0, diagnostics = null) => {
     case 'operator_round': return `Math.round(+(${next('NUM')}))`;
     case 'operator_length': return `String(${next('STRING')}).length`;
     case 'operator_contains': return `String(${next('STRING1')}).toLowerCase().includes(String(${next('STRING2')}).toLowerCase())`;
-    case 'operator_letter_of': return `String(${next('LETTER')})[Math.max(0,(+(${next('LETTER')}))-1)]||''`;
+    case 'operator_letter_of': return `String(${next('STRING')})[Math.max(0,(+(${next('LETTER')}))-1)]||''`;
     case 'operator_mathop': {
       const op = getField(block, 'OPERATOR');
       const operations = {
         abs: 'Math.abs', floor: 'Math.floor', ceiling: 'Math.ceil', sqrt: 'Math.sqrt',
-        sin: 'Math.sin', cos: 'Math.cos', tan: 'Math.tan', asin: 'Math.asin',
-        acos: 'Math.acos', atan: 'Math.atan', ln: 'Math.log', 'log': 'Math.log10',
+        sin: '(n=>Math.sin(n*Math.PI/180))', cos: '(n=>Math.cos(n*Math.PI/180))', tan: '(n=>Math.tan(n*Math.PI/180))', asin: '(n=>Math.asin(n)*180/Math.PI)',
+        acos: '(n=>Math.acos(n)*180/Math.PI)', atan: '(n=>Math.atan(n)*180/Math.PI)', ln: 'Math.log', 'log': 'Math.log10',
         'e ^': 'Math.exp', '10 ^': '(n=>Math.pow(10,n))'
       };
       if (operations[op]) return `${operations[op]}(+(${next('NUM')}))`;
