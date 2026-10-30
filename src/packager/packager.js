@@ -1272,8 +1272,8 @@ cd "$(dirname "$0")"
         projectJSON = JSON.parse(await projectFile.async('string'));
         projectJSON.nativeAssets = {};
         for (const target of projectJSON.targets || []) {
-          for (const costume of target.costumes || []) {
-            const assetName = costume.md5ext || (costume.assetId && (costume.assetId + '.' + costume.dataFormat));
+          for (const asset of [...(target.costumes || []), ...(target.sounds || [])]) {
+            const assetName = asset.md5ext || (asset.assetId && (asset.assetId + '.' + (asset.dataFormat || asset.format)));
             const assetFile = assetName && projectZip.file(assetName);
             if (assetFile) projectJSON.nativeAssets[assetName] = await assetFile.async('base64');
           }
