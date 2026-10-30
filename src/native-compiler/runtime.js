@@ -91,7 +91,10 @@ export class NativeRuntime {
 
   async wait(seconds, thread) {
     const end = performance.now() + Math.max(0, number(seconds) * 1000);
-    while (this.running && !thread.cancelled && performance.now() < end) await this.yield();
+    while (this.running && !thread.cancelled && performance.now() < end) {
+      const remaining = end - performance.now();
+      await new Promise(resolve => setTimeout(resolve, Math.min(16, Math.max(1, remaining))));
+    }
   }
 
   getVariable(target, id) {
@@ -245,6 +248,7 @@ export class NativeRuntime {
         return other ? Math.hypot(other.x-target.x, other.y-target.y) : Math.hypot(this.mouse.x-target.x,this.mouse.y-target.y);
       }
       default:
+        if (this.host.evaluateExtension) return await this.host.evaluateExtension(block.opcode, {target, block, runtime:this});
         this.host.onUnsupported?.(block.opcode, target);
         return 0;
     }
@@ -293,6 +297,7 @@ export class NativeRuntime {
         while (this.running && !thread.cancelled) {
           const t = duration ? clamp((performance.now()-start)/(duration*1000),0,1) : 1;
           target.x=sx+(x-sx)*t; target.y=sy+(y-sy)*t;
+          this.host.onTargetChange?.(target, block.opcode);
           if (t >= 1) break;
           await this.yield();
         }
@@ -324,7 +329,9 @@ export class NativeRuntime {
       case 'looks_think': target.bubble={type:'think',text:text(await v('MESSAGE'))}; break;
       case 'looks_sayforsecs': case 'looks_thinkforsecs': {
         target.bubble={type:block.opcode.includes('think')?'think':'say',text:text(await v('MESSAGE'))};
-        await this.wait(await n('SECS'),thread); target.bubble=null; break;
+        this.host.onTargetChange?.(target, block.opcode);
+        await this.wait(await n('SECS'),thread); target.bubble=null;
+        this.host.onTargetChange?.(target, block.opcode); break;
       }
       case 'looks_cleargraphiceffects': target.effects={}; break;
       case 'looks_changeeffectby': {
