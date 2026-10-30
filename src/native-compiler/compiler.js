@@ -99,12 +99,16 @@ const compileStack = (blocks, firstId, diagnostics, depth = 0) => {
       case 'motion_turnright': output += `api.turn(${value('DEGREES')});\n`; break;
       case 'motion_turnleft': output += `api.turn(-(${value('DEGREES')}));\n`; break;
       case 'motion_gotoxy': output += `api.goto(${value('X')},${value('Y')});\n`; break;
+      case 'motion_glidesecstoxy': output += `await api.glide(${value('SECS')},${value('X')},${value('Y')});\n`; break;
+      case 'motion_ifonedgebounce': output += 'api.bounce();\n'; break;
       case 'motion_setx': output += `api.setX(${value('X')});\n`; break;
       case 'motion_sety': output += `api.setY(${value('Y')});\n`; break;
       case 'motion_changexby': output += `api.setX(api.sprite.x+(+(${value('DX')})));\n`; break;
       case 'motion_changeyby': output += `api.setY(api.sprite.y+(+(${value('DY')})));\n`; break;
       case 'motion_pointindirection': output += `api.direction=+(${value('DIRECTION')});\n`; break;
       case 'looks_show': output += 'api.sprite.visible=true;\n'; break;
+      case 'looks_setsizeto': output += `api.sprite.size=+(${value('SIZE')});\n`; break;
+      case 'looks_changesizeby': output += `api.sprite.size+=+(${value('CHANGE')});\n`; break;
       case 'looks_hide': output += 'api.sprite.visible=false;\n'; break;
       case 'looks_nextcostume': output += 'api.nextCostume();\n'; break;
       case 'looks_switchcostumeto': output += `api.switchCostume(${value('COSTUME', getField(block,'COSTUME'))});\n`; break;
