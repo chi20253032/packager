@@ -284,7 +284,7 @@ main{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;
 <header><span class="brand">Native Scratch</span><span id="project-name"></span><span id="status">停止中</span><button id="start">⚑ 実行</button><button id="stop" class="secondary">停止</button></header>
 <main><canvas id="stage" aria-label="Scratch project stage"></canvas></main>
 <div id="warning" hidden role="status"></div>
-<script>${source.replace(/<\\/script/gi, '<\\\\/script')}</script>
+<script>${source.replace(/<\/script/gi, '<\\/script')
 </body>
 </html>`;
 };
