@@ -12,6 +12,7 @@ import {OutdatedPackagerError} from '../common/errors';
 import {darken} from './colors';
 import {Adapter} from './adapter';
 import encodeBigString from './encode-big-string';
+import {createNativeHTML} from '../native-compiler/native-html';
 
 const PROGRESS_LOADED_SCRIPTS = 0.1;
 
@@ -1260,6 +1261,32 @@ cd "$(dirname "$0")"
     }
     this.used = true;
     this.ensureNotAborted();
+    if (this.options.target === 'native-html') {
+      let projectJSON;
+      if (this.project.type === 'blob') {
+        projectJSON = JSON.parse(new TextDecoder().decode(this.project.arrayBuffer));
+      } else {
+        const projectZip = await (await getJSZip()).loadAsync(this.project.arrayBuffer);
+        const projectFile = projectZip.file('project.json');
+        if (!projectFile) throw new Error('Invalid Scratch project: project.json is missing from the SB3 archive.');
+        projectJSON = JSON.parse(await projectFile.async('string'));
+        projectJSON.nativeAssets = {};
+        for (const target of projectJSON.targets || []) {
+          for (const costume of target.costumes || []) {
+            const assetName = costume.md5ext || (costume.assetId && (costume.assetId + '.' + costume.dataFormat));
+            const assetFile = assetName && projectZip.file(assetName);
+            if (assetFile) projectJSON.nativeAssets[assetName] = await assetFile.async('base64');
+          }
+        }
+      }
+      const html = createNativeHTML(projectJSON, this.options.app.windowTitle);
+      this.ensureNotAborted();
+      return {
+        data: html,
+        type: 'text/html',
+        filename: this.generateFilename('native.html')
+      };
+    }
     await this.loadResources();
     this.ensureNotAborted();
     const html = encodeBigString`<!DOCTYPE html>
