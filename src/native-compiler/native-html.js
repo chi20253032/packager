@@ -16,7 +16,7 @@ export const createNativeHTML = (project, title = 'Scratch project') => {
   const ctx = canvas.getContext('2d');
   const input = {mouseX:0,mouseY:0,mouseDown:false,keys:new Set()};
   const sprites = project.sprites.filter(s => !s.isStage).map((s,i) => ({
-    ...s, x:s.x, y:s.y, direction:s.direction, visible:s.visible, bubble:'', bubbleUntil:0, running:true, id:i,
+    ...s, x:s.x, y:s.y, direction:s.direction, visible:s.visible, bubble:'', bubbleUntil:0, running:true, id:i, variables:{...(s.variables||{})},
     images:(s.costumes || []).map(costume => {
       const encoded=project.assets[costume.asset];
       if(!encoded)return null;
@@ -40,13 +40,28 @@ export const createNativeHTML = (project, title = 'Scratch project') => {
     say(text){sprite.bubble=String(text);sprite.bubbleUntil=Infinity;},
     async sayFor(text,seconds){this.say(text);await sleep(Math.max(0,Number(seconds)||0)*1000);sprite.bubble='';},
     wait(seconds){return sleep(Math.max(0,Number(seconds)||0)*1000);},
+    getVar(name){return sprite.variables ? sprite.variables[name] : 0;},
+    setVar(name,value){if(!sprite.variables)sprite.variables={};sprite.variables[name]=value;},
+    nextCostume(){if(sprite.images.length)sprite.costumeIndex=(sprite.costumeIndex+1)%sprite.images.length;},
+    switchCostume(name){const index=sprite.images.findIndex(item=>String(item.costume.name).toLowerCase()===String(name).toLowerCase());if(index>=0)sprite.costumeIndex=index;},
+    broadcast(name){broadcast(String(name));},
+    async broadcastAndWait(name){await broadcast(String(name));},
     yield(){return new Promise(resolve=>requestAnimationFrame(resolve));}
   });
+  const broadcast = async name => {
+    const jobs=[];
+    for(const target of project.sprites){
+      for(const script of target.scripts || []){
+        if(script.trigger.type==='broadcast' && script.trigger.name===name) jobs.push(launch(target.isStage?stage:sprites.find(item=>item.name===target.name)||target,script));
+      }
+    }
+    await Promise.all(jobs.filter(Boolean));
+  };
   const launch = (sprite, script) => {
     if (!running) return;
     const api=apiFor(sprite);
-    try { (new Function('api','input','return (async()=>{'+script.code+'})()'))(api,input); }
-    catch(error){console.error('Native script error:',error);}
+    try { return (new Function('api','input','return (async()=>{'+script.code+'})()'))(api,input).catch(error=>console.error('Native script error:',error)); }
+    catch(error){console.error('Native script error:',error);return Promise.resolve();}
   };
   const runTrigger = type => { (stage.scripts || []).filter(s=>s.trigger.type===type).forEach(s=>launch(stage,s)); sprites.forEach(sprite => sprite.scripts.filter(s=>s.trigger.type===type).forEach(s=>launch(sprite,s))); };
   const resize = () => {const dpr=Math.min(devicePixelRatio||1,2);canvas.width=Math.round(innerWidth*dpr);canvas.height=Math.round(innerHeight*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);};
