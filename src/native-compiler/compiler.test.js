@@ -1,4 +1,5 @@
 import {compileNativeProject} from './compiler';
+import {createNativeHTML} from './native-html';
 
 const block = (opcode, next = null, inputs = {}, fields = {}, topLevel = false) => ({
   opcode, next, inputs, fields, topLevel, shadow: false
@@ -77,6 +78,15 @@ describe('native Scratch compiler', () => {
     const result = compileNativeProject(project);
     expect(result.sprites[0].scripts[0].code).toContain('api.setVar("score",5)');
     expect(result.sprites[0].scripts[0].code).toContain('api.broadcast("done")');
+  });
+
+
+  test('creates a standalone HTML document without the Scratch Player bundle', () => {
+    const html = createNativeHTML({targets: [{name: 'Sprite1', blocks: {}}]}, 'Native Test');
+    expect(html).toContain('<!doctype html>');
+    expect(html).toContain('Native Test');
+    expect(html).not.toContain('Scaffolding');
+    expect(html).not.toContain('scratch-vm');
   });
 
   test('rejects malformed project data', () => {
