@@ -55,6 +55,7 @@ describe('native Scratch compiler', () => {
       }]
     };
     const result = compileNativeProject(project);
+    expect(result.sprites[0].scripts[0].code).toContain('api.move(10,0)');
     expect(() => new Function('api', 'input', 'return (async()=>{' + result.sprites[0].scripts[0].code + '})()')).not.toThrow();
   });
 
