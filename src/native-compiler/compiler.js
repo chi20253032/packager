@@ -84,6 +84,12 @@ const compileStack = (blocks, firstId, diagnostics, depth = 0) => {
       case 'motion_pointindirection': output += `api.direction=+(${value('DIRECTION')});\n`; break;
       case 'looks_show': output += 'api.sprite.visible=true;\n'; break;
       case 'looks_hide': output += 'api.sprite.visible=false;\n'; break;
+      case 'looks_nextcostume': output += 'api.nextCostume();\n'; break;
+      case 'looks_switchcostumeto': output += `api.switchCostume(${value('COSTUME', getField(block,'COSTUME'))});\n`; break;
+      case 'data_setvariableto': output += `api.setVar(${jsonForScript(getField(block,'VARIABLE'))},${value('VALUE')});\n`; break;
+      case 'data_changevariableby': output += `api.setVar(${jsonForScript(getField(block,'VARIABLE'))},(+api.getVar(${jsonForScript(getField(block,'VARIABLE'))})+(+(${value('VALUE')}))));\n`; break;
+      case 'event_broadcast': output += `api.broadcast(${value('BROADCAST_INPUT',getField(block,'BROADCAST_OPTION'))});\n`; break;
+      case 'event_broadcastandwait': output += `await api.broadcastAndWait(${value('BROADCAST_INPUT',getField(block,'BROADCAST_OPTION'))});\n`; break;
       case 'looks_say': output += `api.say(${value('MESSAGE','')});\n`; break;
       case 'looks_sayforsecs': output += `await api.sayFor(${value('MESSAGE','')},${value('SECS',2)});\n`; break;
       case 'control_wait': output += `await api.wait(${value('DURATION',1)});\n`; break;
@@ -120,6 +126,7 @@ export const compileNativeProject = (project) => {
       if (block.opcode === 'event_whenkeypressed') trigger = {type:'key', key:getField(block,'KEY_OPTION').toLowerCase()};
       if (block.opcode === 'event_whenthisspriteclicked') trigger = {type:'click'};
       if (block.opcode === 'event_whenstageclicked') trigger = {type:'stage-click'};
+      if (block.opcode === 'event_whenbroadcastreceived') trigger = {type:'broadcast', name:getField(block,'BROADCAST_OPTION')};
       if (block.opcode === 'event_whenbroadcastreceived') trigger = {type:'broadcast', name:getField(block,'BROADCAST_OPTION')};
       if (!trigger) {
         if (block.opcode.startsWith('event_')) diagnostics.add(block.opcode);
