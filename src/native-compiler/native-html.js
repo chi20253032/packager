@@ -95,7 +95,7 @@ export const createNativeHTML = (project, title = 'Scratch project') => {
     if(stage.images[0]&&stage.images[0].complete&&stage.images[0].naturalWidth)ctx.drawImage(stage.images[0],-240,-180,480,360);
     for(const s of sprites){if(!s.visible)continue;ctx.save();ctx.translate(s.x,-s.y);ctx.rotate((s.direction-90)*Math.PI/180);ctx.scale(s.size/100,s.size/100);
       const costume=s.images[s.costumeIndex]||s.images[0];
-      if(costume&&costume.image.complete&&costume.image.naturalWidth){const im=costume.image,c=costume.costume;ctx.drawImage(im,-(c.rotationCenterX||im.naturalWidth/2),-(c.rotationCenterY||im.naturalHeight/2));}
+      if(costume&&costume.image.complete&&costume.image.naturalWidth){const im=costume.image,c=costume.costume;const cx=Number.isFinite(c.rotationCenterX)?c.rotationCenterX:im.naturalWidth/2,cy=Number.isFinite(c.rotationCenterY)?c.rotationCenterY:im.naturalHeight/2;ctx.drawImage(im,-cx,-cy);}
       else{ctx.fillStyle='#4c97ff';ctx.strokeStyle='#245a9b';ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,20,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(6,-5,3,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(6,5,3,0,Math.PI*2);ctx.fill();}
       ctx.restore();
       if(s.bubble){ctx.fillStyle='#fff';ctx.strokeStyle='#333';ctx.lineWidth=1;ctx.beginPath();ctx.roundRect(s.x-45,-s.y-54,90,28,8);ctx.fill();ctx.stroke();ctx.fillStyle='#222';ctx.font='12px sans-serif';ctx.textAlign='center';ctx.fillText(s.bubble.slice(0,18),s.x,-s.y-36);}
