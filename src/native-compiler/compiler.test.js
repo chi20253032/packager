@@ -89,7 +89,9 @@ describe('native Scratch compiler', () => {
     expect(html).not.toContain('Scaffolding');
     expect(html).not.toContain('scratch-vm');
     expect(html).toContain('class NativeRuntime');
-    const script = html.match(/<script>([\\s\\S]*?)<\\/script>/)[1];
+    const scriptStart = html.indexOf('<script>') + '<script>'.length;
+    const scriptEnd = html.lastIndexOf('</script>');
+    const script = html.slice(scriptStart, scriptEnd);
     expect(script).toContain('NATIVE_RUNTIME_SUPPORTED');
     expect(() => new Function(script)).not.toThrow();
   });
