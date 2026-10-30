@@ -137,12 +137,12 @@ if (fs.existsSync(faviconPath)) {
 
 // Inspect actual opening tags only. Bundle source can contain HTML-like strings
 // such as "<script src=..." which must not be mistaken for document tags.
-const openingTags = html.match(/<(?:script|link)\\b[^>]*>/gi) || [];
-const externalScriptTags = openingTags.filter(tag => /^<script\\b/i.test(tag) && /\\bsrc\\s*=/i.test(tag));
+const openingTags = html.match(/<(?:script|link)\b[^>]*>/gi) || [];
+const externalScriptTags = openingTags.filter(tag => /^<script\b/i.test(tag) && /\bsrc\s*=/i.test(tag));
 const externalStylesheetLinks = openingTags.filter(tag =>
-  /^<link\\b/i.test(tag) &&
-  /\\brel\\s*=\\s*(["'])[^"']*\\bstylesheet\\b[^"']*\\1/i.test(tag) &&
-  /\\bhref\\s*=/i.test(tag)
+  /^<link\b/i.test(tag) &&
+  /\brel\s*=\s*(["'])[^"']*\bstylesheet\b[^"']*\1/i.test(tag) &&
+  /\bhref\s*=/i.test(tag)
 );
 if (externalScriptTags.length || externalStylesheetLinks.length) {
   throw new Error('Standalone output still contains external script or stylesheet references: ' +
