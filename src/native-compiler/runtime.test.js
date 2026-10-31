@@ -95,6 +95,24 @@ describe('native runtime v2',()=>{
     runtime.stopAll();
   });
 
+  test('passes custom procedure arguments into native argument reporters',async()=>{
+    const project=makeProject({
+      flag:makeBlock('event_whenflagclicked','call',{}, {},true),
+      call:makeBlock('procedures_call',null,{input0:[1,[4,'37']]}),
+      definition:makeBlock('procedures_definition','set',{custom_block:[1,'prototype']},{},true),
+      prototype:makeBlock('procedures_prototype',null,{},{}),
+      set:makeBlock('data_setvariableto',null,{VALUE:[2,'argument']},{VARIABLE:['score','score']}),
+      argument:makeBlock('argument_reporter_string_number',null,{}, {VALUE:['amount',null]})
+    });
+    project.targets[1].blocks.prototype.mutation={proccode:'add %s',argumentids:'["arg-id"]',argumentnames:'["amount"]',warp:'false'};
+    project.targets[1].blocks.call.mutation={proccode:'add %s',argumentids:'["arg-id"]',argumentnames:'["amount"]',warp:'false'};
+    const runtime=new NativeRuntime(project);
+    runtime.start();
+    await new Promise(resolve=>setTimeout(resolve,10));
+    expect(runtime.sprites[0].variables.score.value).toBe(37);
+    runtime.stopAll();
+  });
+
   test('executes registered native extension adapters',async()=>{
     const project=makeProject({
       flag:makeBlock('event_whenflagclicked','custom',{}, {},true),
