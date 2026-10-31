@@ -51,6 +51,7 @@ export class NativeRuntime {
     this.fencing = this.options.fencing !== false;
     this.turbo = !!this.options.turbo;
     this.framerate = this.constructor.clamp(this.constructor.number(this.options.framerate ?? 30), 1, 240);
+    this.instructionLimit=this.options.miscLimits===false?Infinity:1000000;
     this.tempo=60; this.instrument=1;
     this.username = this.constructor.text(this.options.username || 'player').replace(/####/g, String(Math.floor(Math.random()*9000)+1000));
     this.running = false;
@@ -428,7 +429,7 @@ export class NativeRuntime {
     const visited = new Set();
     let steps = 0;
     while (id && this.running && !thread.cancelled && target.alive && !visited.has(id)) {
-      if (++steps > 1000000) throw new Error('Script instruction safety limit exceeded');
+      if (++steps > this.instructionLimit) throw new Error('Script instruction safety limit exceeded');
       visited.add(id);
       const block = target.blocks[id];
       if (!block) break;
