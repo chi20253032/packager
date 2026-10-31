@@ -172,10 +172,20 @@ export class NativeRuntime {
     if (variable) variable.value = value;
     else target.variables[id] = {id, name: id, value};
     this.host.onVariable?.(target, id, value);
+    if(variable?.cloud) this.host.onCloudVariable?.(variable.name,value,target);
   }
 
   getList(target, id) {
     return target.lists[id] || this.globalLists[id] || {value: []};
+  }
+
+  applyCloudVariable(name,value) {
+    for(const target of this.targets) for(const variable of Object.values(target.variables)) {
+      if(variable.cloud && variable.name===name) {
+        variable.value=value;
+        this.host.onVariable?.(target,variable.id,value);
+      }
+    }
   }
 
   async runHat(opcode, match = null) {
