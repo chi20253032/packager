@@ -564,19 +564,19 @@ export class NativeRuntime {
         const id=this.field(block,'VARIABLE'), current=this.getVariable(target,id).value;
         this.setVariable(target,id,this.constructor.number(current)+await n('VALUE')); break;
       }
-      case 'data_addtolist': this.getList(target,this.fieldId(block,'LIST')).value.push(await v('ITEM')); break;
+      case 'data_addtolist': { const id=this.fieldId(block,'LIST'),list=this.getList(target,id).value; list.push(await v('ITEM')); this.host.onList?.(target,id,list); break; }
       case 'data_deleteoflist': {
         const list=this.getList(target,this.fieldId(block,'LIST')).value, index=this.listIndex(await v('INDEX'),list.length);
-        if (index>=0) list.splice(index,1); break;
+        if (index>=0) list.splice(index,1); this.host.onList?.(target,this.fieldId(block,'LIST'),list); break;
       }
       case 'data_deletealloflist': this.getList(target,this.field(block,'LIST')).value.length=0; break;
       case 'data_insertatlist': {
         const list=this.getList(target,this.field(block,'LIST')).value, index=this.listIndex(await v('INDEX'),list.length,true);
-        list.splice(index,0,await v('ITEM')); break;
+        list.splice(index,0,await v('ITEM')); this.host.onList?.(target,this.fieldId(block,'LIST'),list); break;
       }
       case 'data_replaceitemoflist': {
         const list=this.getList(target,this.field(block,'LIST')).value, index=this.listIndex(await v('INDEX'),list.length);
-        if (index>=0) list[index]=await v('ITEM'); break;
+        if (index>=0) list[index]=await v('ITEM'); this.host.onList?.(target,this.fieldId(block,'LIST'),list); break;
       }
       case 'control_wait': await this.wait(await n('DURATION'),thread); break;
       case 'control_repeat': {
