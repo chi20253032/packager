@@ -468,9 +468,17 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
   });
 
   canvas.addEventListener('pointermove', event => {
-    const point = screenPoint(event);
-    runtime.pointerMove(point.x, point.y);
+    if(document.pointerLockElement===canvas) {
+      const rect=canvas.getBoundingClientRect();
+      runtime.pointerMove(runtime.mouse.x+event.movementX*stageWidth/rect.width,runtime.mouse.y-event.movementY*stageHeight/rect.height);
+    } else {
+      const point = screenPoint(event);
+      runtime.pointerMove(point.x, point.y);
+    }
   });
+  if(project.nativeOptions.chunks && project.nativeOptions.chunks.pointerlock) {
+    canvas.addEventListener('click',()=>canvas.requestPointerLock?.());
+  }
   canvas.addEventListener('pointerdown', event => {
     event.preventDefault();
     canvas.setPointerCapture && canvas.setPointerCapture(event.pointerId);
