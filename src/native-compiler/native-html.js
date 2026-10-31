@@ -249,9 +249,9 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
         const label=document.createElement('span'); label.textContent=(target.isStage?'Stage':target.name)+' · '+list.name;
         item.append(label);
         if(settings.editableLists) {
-          const editor=document.createElement('textarea'); editor.rows=2; editor.value=list.value.join('\n');
+          const editor=document.createElement('textarea'); editor.rows=2; editor.value=list.value.join('\\n');
           editor.setAttribute('aria-label','Edit list '+list.name);
-          editor.addEventListener('change',()=>{list.value=editor.value.split(/\r?\n/);});
+          editor.addEventListener('change',()=>{list.value=editor.value.split(/\\r?\\n/);});
           item.append(editor);
         } else {
           const value=document.createElement('strong'); value.textContent=list.value.join(', ');
