@@ -151,6 +151,44 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
     playingSources.clear();
   };
 
+  const playMusicNote = async (note,beats,instrument,tempo) => {
+    const audio=getAudioContext();
+    if(!audio) return;
+    await audio.resume();
+    const duration=Math.max(0.025,beats*60/Math.max(1,tempo));
+    const oscillator=audio.createOscillator(), gain=audio.createGain();
+    const waveforms=['sine','triangle','sine','sine','sawtooth','square','triangle','sine','triangle','sawtooth','square','triangle','sine','sawtooth','triangle','square','sine','triangle','sawtooth','square','sine'];
+    oscillator.type=waveforms[Math.max(0,Math.min(waveforms.length-1,(instrument||1)-1))];
+    oscillator.frequency.setValueAtTime(440*Math.pow(2,(note-69)/12),audio.currentTime);
+    gain.gain.setValueAtTime(0.0001,audio.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.16,audio.currentTime+0.015);
+    gain.gain.setTargetAtTime(0.0001,audio.currentTime+Math.max(0.02,duration-0.04),0.025);
+    oscillator.connect(gain); gain.connect(audio.destination);
+    playingSources.add(oscillator);
+    oscillator.onended=()=>playingSources.delete(oscillator);
+    oscillator.start(); oscillator.stop(audio.currentTime+duration+0.08);
+    return new Promise(resolve=>{oscillator.addEventListener('ended',resolve,{once:true});});
+  };
+  const playMusicDrum = async (drum,beats,tempo) => {
+    const audio=getAudioContext();
+    if(!audio) return;
+    await audio.resume();
+    const duration=Math.max(0.04,beats*60/Math.max(1,tempo));
+    const oscillator=audio.createOscillator(), gain=audio.createGain();
+    const frequencies={1:58,2:150,3:95,4:220,5:330,6:520,7:760,8:1100,9:1600,10:90,11:180,12:260,13:420,14:620,15:880,16:1200,17:75,18:140,19:240,20:480,21:960};
+    oscillator.type=drum===1?'sine':(drum===2?'triangle':'square');
+    oscillator.frequency.setValueAtTime(frequencies[drum]||180,audio.currentTime);
+    oscillator.frequency.exponentialRampToValueAtTime(Math.max(35,(frequencies[drum]||180)*0.35),audio.currentTime+duration);
+    gain.gain.setValueAtTime(0.0001,audio.currentTime);
+    gain.gain.exponentialRampToValueAtTime(drum===1?0.8:0.35,audio.currentTime+0.005);
+    gain.gain.exponentialRampToValueAtTime(0.0001,audio.currentTime+duration);
+    oscillator.connect(gain); gain.connect(audio.destination);
+    playingSources.add(oscillator);
+    oscillator.onended=()=>playingSources.delete(oscillator);
+    oscillator.start(); oscillator.stop(audio.currentTime+duration+0.02);
+    return new Promise(resolve=>{oscillator.addEventListener('ended',resolve,{once:true});});
+  };
+
   const drawTarget = target => {
     if (!target.visible || !target.alive) return;
     const costume = currentCostume(target);
@@ -356,6 +394,8 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
     },
     hitTest,
     playSound,
+    playMusicNote,
+    playMusicDrum,
     stopAllSounds,
     ask(question) { return Promise.resolve(window.prompt(question) || ''); }
   });
