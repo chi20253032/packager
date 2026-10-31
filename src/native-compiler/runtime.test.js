@@ -152,18 +152,39 @@ describe('native runtime v2',()=>{
     expect(runtime.overlaps(a,b)).toBe(false);
   });
 
-  test('deleting a clone releases its clone slot and stop-all removes remaining clones',()=>{
+  test('deleting a clone releases its clone slot and stop-all removes remaining clones',async()=>{
     const runtime=new NativeRuntime(makeProject({}));
     const original=runtime.sprites[0];
     const clone=runtime.createClone(original);
     expect(runtime.clones).toHaveLength(1);
-    runtime.targets.push(clone);
-    runtime.executeBlock(clone,makeBlock('control_delete_this_clone'),{cancelled:false,target:clone}).then(()=>{
-      expect(runtime.clones).toHaveLength(0);
-      expect(runtime.targets).not.toContain(clone);
-    });
+    await runtime.executeBlock(clone,makeBlock('control_delete_this_clone'),{cancelled:false,target:clone});
+    expect(runtime.clones).toHaveLength(0);
+    expect(runtime.targets).not.toContain(clone);
     runtime.stopAll();
     expect(runtime.targets).toEqual(runtime.originalTargets);
+  });
+
+  test('deletes all list entries through the native list index menu',async()=>{
+    const project=makeProject({
+      flag:makeBlock('event_whenflagclicked','remove',{}, {},true),
+      remove:makeBlock('data_deleteoflist',null,{INDEX:[1,[10,'all']]},{LIST:['items','items']})
+    });
+    project.targets[1].lists.items[1]=['one','two','three'];
+    const runtime=new NativeRuntime(project);
+    runtime.start();
+    await new Promise(resolve=>setTimeout(resolve,5));
+    expect(runtime.sprites[0].lists.items.value).toEqual([]);
+    runtime.stopAll();
+  });
+
+  test('tracks show and hide state for variable and list monitors',()=>{
+    const runtime=new NativeRuntime(makeProject({}));
+    runtime.setMonitorVisible('score',true);
+    runtime.setMonitorVisible('items',true);
+    expect(runtime.monitors.get('score').visible).toBe(true);
+    expect(runtime.monitors.get('items').visible).toBe(true);
+    runtime.setMonitorVisible('score',false);
+    expect(runtime.monitors.get('score').visible).toBe(false);
   });
 
   test('implements native Music extension tempo and note dispatch',async()=>{
