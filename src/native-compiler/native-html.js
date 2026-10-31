@@ -48,6 +48,8 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
     const format = String(costume.dataFormat || asset.split('.').pop() || 'png').toLowerCase();
     const mime = format === 'svg' ? 'image/svg+xml' : (format === 'jpg' || format === 'jpeg' ? 'image/jpeg' : 'image/png');
     const image = new Image();
+    image.addEventListener('load',()=>{ draw(); },{once:true});
+    image.addEventListener('error',()=>{ warning.hidden=false; warning.textContent='画像アセットを読み込めません: '+asset; },{once:true});
     image.src = 'data:' + mime + ';base64,' + encoded;
     images.set(asset, image);
     return image;
@@ -196,7 +198,7 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
     context.save();
     context.translate(target.x, -target.y);
     if (target.rotationStyle === 'all around') context.rotate(((target.direction == null ? 90 : target.direction) - 90) * Math.PI / 180);
-    else if (target.rotationStyle === 'left-right' && target.direction < 0) context.scale(-1, 1);
+    else if (target.rotationStyle === 'left-right' && (target.direction < 0 || target.direction > 180)) context.scale(-1, 1);
     context.scale((target.size || 100) / 100, (target.size || 100) / 100);
     const effects=target.effects||{};
     const brightness=Math.max(-100,Math.min(100,Number(effects.brightness)||0));
@@ -238,6 +240,7 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
     monitorPanel.hidden=false;
     for(const target of runtime.targets) {
       for(const variable of Object.values(target.variables||{})) {
+        if(runtime.monitors.get(variable.id)?.visible!==true) continue;
         const item=document.createElement('div'); item.className='monitor';
         const label=document.createElement('span'); label.textContent=(target.isStage?'Stage':target.name)+' · '+variable.name;
         const value=document.createElement('strong'); value.textContent=String(variable.value);
@@ -245,6 +248,7 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
         item.append(label,value); monitorPanel.append(item);
       }
       for(const list of Object.values(target.lists||{})) {
+        if(runtime.monitors.get(list.id)?.visible!==true) continue;
         const item=document.createElement('div'); item.className='monitor list-monitor';
         const label=document.createElement('span'); label.textContent=(target.isStage?'Stage':target.name)+' · '+list.name;
         item.append(label);
@@ -376,6 +380,7 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
     },
     onVariable() { draw(); renderMonitors(); },
     onList() { renderMonitors(); },
+    onMonitorChange() { renderMonitors(); },
     onCloudVariable(name,value) { if(cloudEnabledFor({cloud:true,name})) sendCloud(name,value); },
     onClone() { draw(); renderMonitors(); },
     onDeleteClone() { draw(); renderMonitors(); },
