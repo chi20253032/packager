@@ -128,6 +128,58 @@ describe('native runtime v2',()=>{
     runtime.stopAll();
   });
 
+  test('compares non-numeric operands using Scratch-style case-insensitive text ordering',async()=>{
+    const project=makeProject({
+      flag:makeBlock('event_whenflagclicked','set',{}, {},true),
+      set:makeBlock('data_setvariableto',null,{VALUE:[2,'greater']},{VARIABLE:['score','score']}),
+      greater:makeBlock('operator_gt',null,{OPERAND1:[1,[10,'banana']],OPERAND2:[1,[10,'Apple']]})
+    });
+    const runtime=new NativeRuntime(project);
+    runtime.start();
+    await new Promise(resolve=>setTimeout(resolve,5));
+    expect(runtime.sprites[0].variables.score.value).toBe(true);
+    runtime.stopAll();
+  });
+
+  test('uses sprite bounds for native touching sensing',async()=>{
+    const project=makeProject({});
+    const runtime=new NativeRuntime(project);
+    const a=runtime.sprites[0];
+    const b={...a,id:'other',x:40,y:0,alive:true,visible:true,costumes:[],currentCostume:0,size:100,rotationStyle:'all around'};
+    runtime.targets.push(b);
+    expect(runtime.overlaps(a,b)).toBe(true);
+    b.x=100;
+    expect(runtime.overlaps(a,b)).toBe(false);
+  });
+
+  test('deleting a clone releases its clone slot and stop-all removes remaining clones',()=>{
+    const runtime=new NativeRuntime(makeProject({}));
+    const original=runtime.sprites[0];
+    const clone=runtime.createClone(original);
+    expect(runtime.clones).toHaveLength(1);
+    runtime.targets.push(clone);
+    runtime.executeBlock(clone,makeBlock('control_delete_this_clone'),{cancelled:false,target:clone}).then(()=>{
+      expect(runtime.clones).toHaveLength(0);
+      expect(runtime.targets).not.toContain(clone);
+    });
+    runtime.stopAll();
+    expect(runtime.targets).toEqual(runtime.originalTargets);
+  });
+
+  test('executes registered native extension reporters',async()=>{
+    const project=makeProject({
+      flag:makeBlock('event_whenflagclicked','set',{}, {},true),
+      set:makeBlock('data_setvariableto',null,{VALUE:[2,'reporter']},{VARIABLE:['score','score']}),
+      reporter:makeBlock('extension_native_score')
+    });
+    const runtime=new NativeRuntime(project);
+    runtime.registerExtension('extension_native_score',{reporter:()=>99});
+    runtime.start();
+    await new Promise(resolve=>setTimeout(resolve,5));
+    expect(runtime.sprites[0].variables.score.value).toBe(99);
+    runtime.stopAll();
+  });
+
   test('reports unsupported extension opcodes to host instead of silently pretending',async()=>{
     const unsupported=[];
     const project=makeProject({flag:makeBlock('event_whenflagclicked','custom',{}, {},true),custom:makeBlock('extension_example_custom')});
