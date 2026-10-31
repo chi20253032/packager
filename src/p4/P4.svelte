@@ -126,6 +126,163 @@
   .version a {
     color: inherit;
   }
+
+  :global(html) {
+    min-width: 320px;
+    min-height: 100%;
+    background: #f4f6fb;
+    scroll-behavior: smooth;
+  }
+  :global(body) {
+    margin: 0;
+    min-height: 100vh;
+    background:
+      radial-gradient(ellipse at 12% 0%, rgba(76, 151, 255, .13), transparent 38rem),
+      radial-gradient(ellipse at 92% 18%, rgba(153, 102, 255, .10), transparent 34rem),
+      #f4f6fb;
+    color: #182235;
+    -webkit-tap-highlight-color: transparent;
+  }
+  :global([theme="dark"] body) {
+    background:
+      radial-gradient(ellipse at 12% 0%, rgba(76, 151, 255, .16), transparent 38rem),
+      radial-gradient(ellipse at 92% 18%, rgba(153, 102, 255, .12), transparent 34rem),
+      #101522;
+    color: #edf2ff;
+  }
+  main {
+    width: min(100% - 28px, 1040px);
+    margin: 0 auto;
+    padding: 18px 0 34px;
+  }
+  :global(.card) {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 920px;
+    margin: 16px auto;
+    padding: clamp(18px, 3vw, 30px);
+    border: 1px solid rgba(115, 132, 160, .18);
+    border-radius: 22px;
+    background: rgba(255, 255, 255, .92);
+    box-shadow: 0 12px 34px rgba(31, 48, 78, .075);
+    backdrop-filter: blur(12px);
+  }
+  :global([theme="dark"] .card) {
+    background: rgba(28, 36, 53, .94);
+    border-color: rgba(160, 178, 210, .16);
+    box-shadow: 0 14px 36px rgba(0, 0, 0, .22);
+  }
+  :global(h1) {
+    font-size: clamp(1.8rem, 5vw, 2.6rem);
+    line-height: 1.12;
+    letter-spacing: -.045em;
+    font-weight: 800;
+  }
+  :global(h2) {
+    font-size: clamp(1.25rem, 3vw, 1.55rem);
+    letter-spacing: -.025em;
+    font-weight: 750;
+  }
+  :global(h3) {
+    margin-top: 24px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(120, 140, 170, .22);
+    font-size: 1.05rem;
+  }
+  :global(p) {
+    line-height: 1.65;
+  }
+  :global(input:not([type="checkbox"]):not([type="radio"])),
+  :global(textarea),
+  :global(select) {
+    box-sizing: border-box;
+    max-width: 100%;
+    min-height: 42px;
+    padding: 9px 12px;
+    border: 1px solid #b8c4d6;
+    border-radius: 11px;
+    font: inherit;
+    font-size: 16px;
+    background: #fff;
+    color: #182235;
+  }
+  :global(textarea) {
+    min-height: 150px;
+  }
+  :global([theme="dark"] input:not([type="checkbox"]):not([type="radio"])),
+  :global([theme="dark"] textarea),
+  :global([theme="dark"] select) {
+    background: #151d2d;
+    color: #edf2ff;
+    border-color: #53627c;
+  }
+  :global(input[type="checkbox"]),
+  :global(input[type="radio"]) {
+    width: 19px;
+    height: 19px;
+    accent-color: #3978e8;
+    vertical-align: middle;
+  }
+  :global(button) {
+    min-height: 44px;
+    border-radius: 12px;
+    font: inherit;
+    font-size: 16px;
+    touch-action: manipulation;
+  }
+  :global(a) {
+    text-underline-offset: 3px;
+  }
+  :global(a:focus-visible),
+  :global(button:focus-visible),
+  :global(input:focus-visible),
+  :global(select:focus-visible),
+  :global(textarea:focus-visible),
+  :global(summary:focus-visible) {
+    outline: 3px solid rgba(57, 120, 232, .45);
+    outline-offset: 2px;
+  }
+  footer {
+    max-width: 920px;
+    margin: 26px auto 0;
+    padding: 18px;
+    color: #65738a;
+    font-size: .92rem;
+    line-height: 1.8;
+  }
+  :global([theme="dark"]) footer {
+    color: #aab6ca;
+  }
+  @media (max-width: 640px) {
+    main {
+      width: min(100% - 16px, 1040px);
+      padding-top: 8px;
+    }
+    :global(.card) {
+      margin: 9px auto;
+      padding: 17px;
+      border-radius: 17px;
+    }
+    :global(.option) {
+      overflow-wrap: anywhere;
+    }
+    :global(input[type="text"]),
+    :global(input[type="number"]),
+    :global(select) {
+      max-width: 100%;
+    }
+    footer {
+      padding: 12px 6px 26px;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    :global(*), :global(*::before), :global(*::after) {
+      scroll-behavior: auto !important;
+      animation-duration: .01ms !important;
+      transition-duration: .01ms !important;
+    }
+  }
+
 </style>
 
 <Modals bind:modalVisible={modalVisible} />
