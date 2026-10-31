@@ -22,6 +22,7 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
     autoplay: !!options.autoplay, appearance: options.appearance || {},
     controls: options.controls || {}, monitors: options.monitors || {}, loadingScreen: options.loadingScreen || {},
     cursor: options.cursor || {}, chunks: options.chunks || {}, cloudVariables: options.cloudVariables || {},
+    projectId: options.projectId || project.projectId || '',
     custom: options.custom || {}
   };
   const projectJSON = safe({...project, nativeOptions});
@@ -258,6 +259,51 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
     context.restore();
   };
 
+  const cloudSettings=project.nativeOptions.cloudVariables||{};
+  let cloudSocket=null;
+  const cloudEnabledFor=variable=>{
+    if(!variable.cloud) return false;
+    if(cloudSettings.mode==='ws') return true;
+    if(cloudSettings.mode==='custom') return cloudSettings.custom?.[variable.name]==='ws';
+    return false;
+  };
+  const sendCloud=(name,value)=>{
+    if(!cloudSocket || cloudSocket.readyState!==WebSocket.OPEN) return;
+    const text=String(value);
+    if(!cloudSettings.unsafeCloudBehaviors && (!Number.isFinite(Number(text)) || text.length>256)) return;
+    cloudSocket.send(JSON.stringify({method:'set',name,value:text}));
+  };
+  const cloudVariables=project.targets.flatMap(target=>Object.values(target.variables||{}).map(item=>({name:item[0],value:item[1],cloud:!!item[2]}))).filter(cloudEnabledFor);
+  if(cloudVariables.length && cloudSettings.mode!=='local' && cloudSettings.mode!=='') {
+    const cloudHost=cloudSettings.cloudHost||'wss://clouddata.turbowarp.org';
+    const projectId=String(project.nativeOptions.projectId||'').trim();
+    if(!projectId) {
+      warning.hidden=false;
+      warning.textContent='クラウド変数を使用するには、Packager設定でプロジェクトIDを指定してください。';
+    } else if(typeof WebSocket!=='undefined') {
+      try {
+        cloudSocket=new WebSocket(cloudHost);
+        cloudSocket.addEventListener('open',()=>{
+          cloudSocket.send(JSON.stringify({method:'handshake',user:runtime.username,project_id:projectId}));
+          for(const variable of cloudVariables) sendCloud(variable.name,variable.value);
+        });
+        cloudSocket.addEventListener('message',event=>{
+          try {
+            const message=JSON.parse(event.data);
+            if(message.method==='set' && typeof message.name==='string') runtime.applyCloudVariable(message.name,message.value);
+          } catch(error) { console.warn('Invalid native cloud message',error); }
+        });
+        cloudSocket.addEventListener('error',()=>{
+          warning.hidden=false;
+          warning.textContent='クラウド変数サーバーに接続できませんでした。ローカル実行は続行できます。';
+        });
+      } catch(error) {
+        warning.hidden=false;
+        warning.textContent='クラウド変数接続エラー: '+error.message;
+      }
+    }
+  }
+
   runtime = new NativeRuntime(project, {
     onTargets(targets) {
       for (const target of targets) {
@@ -291,6 +337,7 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
       draw();
     },
     onVariable() { draw(); renderMonitors(); },
+    onCloudVariable(name,value) { if(cloudEnabledFor({cloud:true,name})) sendCloud(name,value); },
     onClone() { draw(); renderMonitors(); },
     onDeleteClone() { draw(); renderMonitors(); },
     onStart() { status.textContent = '実行中'; status.dataset.running = 'true'; renderMonitors(); },
@@ -323,6 +370,7 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
     runtime.start();
   });
   stop.addEventListener('click', () => runtime.stopAll());
+  window.addEventListener('beforeunload',()=>{ if(cloudSocket) cloudSocket.close(); });
   const pauseButton=document.getElementById('pause');
   if(pauseButton) pauseButton.addEventListener('click',()=>{
     if(runtime.paused) { runtime.resume(); pauseButton.textContent='一時停止'; }
