@@ -21,10 +21,18 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
     resizeMode: options.resizeMode || 'preserve-ratio', username: options.username || 'player####',
     autoplay: !!options.autoplay, appearance: options.appearance || {},
     controls: options.controls || {}, monitors: options.monitors || {}, loadingScreen: options.loadingScreen || {},
-    cursor: options.cursor || {}, chunks: options.chunks || {}, cloudVariables: options.cloudVariables || {},
+    app: options.app || {}, cursor: options.cursor || {}, chunks: options.chunks || {}, cloudVariables: options.cloudVariables || {},
     projectId: options.projectId || project.projectId || '',
     custom: options.custom || {}
   };
+  const iconMarkup = nativeOptions.app.icon ? '<link rel="icon" href="' + escapeHTML(nativeOptions.app.icon) + '">' : '';
+  const cursorCSS = nativeOptions.cursor.type === 'none' ? 'none' :
+    (nativeOptions.cursor.type === 'custom' && nativeOptions.cursor.custom ?
+      'url("' + nativeOptions.cursor.custom + '") ' + (Number(nativeOptions.cursor.center?.x)||0) + ' ' + (Number(nativeOptions.cursor.center?.y)||0) + ', auto' : 'auto');
+  const loadingImageMarkup = nativeOptions.loadingScreen.image ?
+    '<img class="loading-image" alt="" src="' + escapeHTML(nativeOptions.loadingScreen.image) + '">' : '';
+  const loadingTextMarkup = escapeHTML(nativeOptions.loadingScreen.text || '読み込み中...');
+  const loadingProgressMarkup = nativeOptions.loadingScreen.progressBar ? '<div class="loading-track"><span id="loading-progress-fill"></span></div>' : '';
   const projectJSON = safe({...project, nativeOptions});
   const runtimeSource = getNativeRuntimeSource();
   const source = `
@@ -37,6 +45,13 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
   const context = canvas.getContext('2d', {alpha:false});
   const warning = document.getElementById('warning');
   const status = document.getElementById('status');
+  const loading = document.getElementById('loading');
+  const loadingProgressFill = document.getElementById('loading-progress-fill');
+  let totalImageAssets=0, loadedImageAssets=0;
+  const updateLoading = force => {
+    if(loadingProgressFill && totalImageAssets) loadingProgressFill.style.width=(loadedImageAssets/totalImageAssets*100)+'%';
+    if(loading && (force || totalImageAssets===0 || loadedImageAssets>=totalImageAssets)) { loading.classList.add('done'); setTimeout(()=>{loading.hidden=true;},180); }
+  };
   const monitorPanel = document.getElementById('monitors');
   const images = new Map();
   const imageFor = costume => {
@@ -48,8 +63,9 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
     const format = String(costume.dataFormat || asset.split('.').pop() || 'png').toLowerCase();
     const mime = format === 'svg' ? 'image/svg+xml' : (format === 'jpg' || format === 'jpeg' ? 'image/jpeg' : 'image/png');
     const image = new Image();
-    image.addEventListener('load',()=>{ draw(); },{once:true});
-    image.addEventListener('error',()=>{ warning.hidden=false; warning.textContent='画像アセットを読み込めません: '+asset; },{once:true});
+    totalImageAssets++;
+    image.addEventListener('load',()=>{ loadedImageAssets++; draw(); updateLoading(); },{once:true});
+    image.addEventListener('error',()=>{ loadedImageAssets++; warning.hidden=false; warning.textContent='画像アセットを読み込めません: '+asset; updateLoading(); },{once:true});
     image.src = 'data:' + mime + ';base64,' + encoded;
     images.set(asset, image);
     return image;
@@ -457,6 +473,7 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
   if (project.nativeOptions.appearance && project.nativeOptions.appearance.foreground) document.body.style.color = project.nativeOptions.appearance.foreground;
   resize();
   renderMonitors();
+  updateLoading();
   document.getElementById('project-name').textContent = project.projectName || 'Scratch project';
   draw();
   if (project.nativeOptions.custom && project.nativeOptions.custom.js) {
@@ -486,27 +503,29 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#171b29">
 <title>${escapeHTML(title)}</title>
+${iconMarkup}
 <style>
 *{box-sizing:border-box}
-html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#171b29;color:#f4f6ff;font:14px system-ui,-apple-system,"Segoe UI",sans-serif}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#171b29;color:#f4f6ff;font:14px system-ui,-apple-system,"Segoe UI",sans-serif;--accent:${escapeHTML(nativeOptions.appearance.accent || '#4c97ff')}
 body{display:flex;flex-direction:column;min-height:100dvh;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
 header{height:58px;flex:0 0 58px;display:flex;align-items:center;gap:10px;padding:8px 14px;background:#22283a;border-bottom:1px solid #394157}
 .brand{font-weight:800;letter-spacing:-.02em;white-space:nowrap}
 #project-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#c5cee2;flex:1}
 #status{font-size:12px;color:#aebbd3}
-button{border:0;border-radius:12px;min-height:42px;padding:9px 15px;background:#4c97ff;color:white;font:inherit;font-weight:750;touch-action:manipulation}
+button{border:0;border-radius:12px;min-height:42px;padding:9px 15px;background:var(--accent);color:white;font:inherit;font-weight:750;touch-action:manipulation}
 button.secondary{background:#39445e}
 main{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:8px;position:relative}
-#stage{width:100%;height:100%;max-width:100%;max-height:100%;aspect-ratio:4/3;object-fit:contain;background:#202536;border-radius:12px;touch-action:none;box-shadow:0 16px 50px #0005}
+#stage{width:100%;height:100%;max-width:100%;max-height:100%;aspect-ratio:4/3;object-fit:contain;background:#202536;border-radius:12px;touch-action:none;cursor:${cursorCSS};box-shadow:0 16px 50px #0005}
 #monitors{position:fixed;z-index:5;left:10px;top:68px;max-width:min(280px,48vw);max-height:38vh;overflow:auto;display:flex;flex-direction:column;gap:5px;padding:7px;border-radius:10px;background:#151a28d9;border:1px solid #64708a88;color:#f4f6ff;font-size:12px;backdrop-filter:blur(10px)}
 .monitor{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:4px 6px;border-radius:6px;background:#30394e}.monitor strong{overflow-wrap:anywhere}.list-monitor{display:block}.monitor textarea{width:100%;margin-top:4px;min-height:42px;border-radius:6px;background:#111827;color:inherit;border:1px solid #64708a;padding:5px;font:inherit}
-#warning{position:fixed;left:10px;right:10px;bottom:max(10px,env(safe-area-inset-bottom));max-height:30vh;overflow:auto;padding:12px 14px;border:1px solid #d69a43;border-radius:12px;background:#3d2c19;color:#ffe1b1;line-height:1.5;white-space:pre-wrap}
+#loading{position:fixed;z-index:20;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:${escapeHTML(nativeOptions.appearance.background || '#171b29')};color:${escapeHTML(nativeOptions.appearance.foreground || '#f4f6ff')};transition:opacity .18s ease}#loading.done{opacity:0;pointer-events:none}.loading-image{max-width:min(60vw,280px);max-height:35vh;object-fit:${nativeOptions.loadingScreen.imageMode === 'stretch' ? 'fill' : 'contain'}}.loading-track{width:min(240px,60vw);height:5px;border-radius:9px;background:#ffffff33;overflow:hidden}#loading-progress-fill{display:block;width:0;height:100%;background:var(--accent);transition:width .12s}\n#warning{position:fixed;left:10px;right:10px;bottom:max(10px,env(safe-area-inset-bottom));max-height:30vh;overflow:auto;padding:12px 14px;border:1px solid #d69a43;border-radius:12px;background:#3d2c19;color:#ffe1b1;line-height:1.5;white-space:pre-wrap}
 [hidden]{display:none!important}
 ${options.custom && options.custom.css ? options.custom.css.split('</style').join('<\\/style') : ''}
 @media(max-width:520px){header{height:54px;flex-basis:54px;padding:6px 8px;gap:6px}.brand{display:none}button{padding:8px 11px;min-height:42px}main{padding:4px}#stage{border-radius:8px}}
 </style>
 </head>
 <body>
+<div id="loading">${loadingImageMarkup}<span>${loadingTextMarkup}</span>${loadingProgressMarkup}</div>
 <header><span class="brand">Native Scratch</span><span id="project-name"></span><span id="status">停止中</span><button id="start">⚑ 実行</button><button id="stop" class="secondary">停止</button>${options.controls && options.controls.pause && options.controls.pause.enabled ? '<button id="pause" class="secondary">一時停止</button>' : ''}${options.controls && options.controls.fullscreen && options.controls.fullscreen.enabled ? '<button id="fullscreen" class="secondary">全画面</button>' : ''}</header>
 <main><canvas id="stage" aria-label="Scratch project stage"></canvas></main>
 <aside id="monitors" aria-label="変数とリスト"></aside>
