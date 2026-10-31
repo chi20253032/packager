@@ -20,6 +20,8 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
     stageWidth: options.stageWidth == null ? 480 : options.stageWidth, stageHeight: options.stageHeight == null ? 360 : options.stageHeight,
     resizeMode: options.resizeMode || 'preserve-ratio', username: options.username || 'player####',
     autoplay: !!options.autoplay, appearance: options.appearance || {},
+    controls: options.controls || {}, monitors: options.monitors || {}, loadingScreen: options.loadingScreen || {},
+    cursor: options.cursor || {}, chunks: options.chunks || {}, cloudVariables: options.cloudVariables || {},
     custom: options.custom || {}
   };
   const projectJSON = safe({...project, nativeOptions});
@@ -34,6 +36,7 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
   const context = canvas.getContext('2d', {alpha:false});
   const warning = document.getElementById('warning');
   const status = document.getElementById('status');
+  const monitorPanel = document.getElementById('monitors');
   const images = new Map();
   const imageFor = costume => {
     if (!costume) return null;
@@ -188,6 +191,39 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
     }
   };
 
+  const renderMonitors = () => {
+    if(!monitorPanel || !runtime) return;
+    monitorPanel.replaceChildren();
+    const settings=project.nativeOptions.monitors||{};
+    if(settings.visible===false) { monitorPanel.hidden=true; return; }
+    monitorPanel.hidden=false;
+    for(const target of runtime.targets) {
+      for(const variable of Object.values(target.variables||{})) {
+        const item=document.createElement('div'); item.className='monitor';
+        const label=document.createElement('span'); label.textContent=(target.isStage?'Stage':target.name)+' · '+variable.name;
+        const value=document.createElement('strong'); value.textContent=String(variable.value);
+        value.style.color=settings.variableColor||'#ff8c1a';
+        item.append(label,value); monitorPanel.append(item);
+      }
+      for(const list of Object.values(target.lists||{})) {
+        const item=document.createElement('div'); item.className='monitor list-monitor';
+        const label=document.createElement('span'); label.textContent=(target.isStage?'Stage':target.name)+' · '+list.name;
+        item.append(label);
+        if(settings.editableLists) {
+          const editor=document.createElement('textarea'); editor.rows=2; editor.value=list.value.join('\n');
+          editor.setAttribute('aria-label','Edit list '+list.name);
+          editor.addEventListener('change',()=>{list.value=editor.value.split(/\r?\n/);});
+          item.append(editor);
+        } else {
+          const value=document.createElement('strong'); value.textContent=list.value.join(', ');
+          value.style.color=settings.listColor||'#fc662c'; item.append(value);
+        }
+        monitorPanel.append(item);
+      }
+    }
+    if(!monitorPanel.childElementCount) { const empty=document.createElement('span'); empty.textContent='表示できる変数・リストはありません'; monitorPanel.append(empty); }
+  };
+
   const draw = () => {
     if (!context) return;
     const width = canvas.width / dpr;
@@ -254,11 +290,13 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
       penContext.restore();
       draw();
     },
-    onVariable() { draw(); },
-    onClone() { draw(); },
-    onDeleteClone() { draw(); },
-    onStart() { status.textContent = '実行中'; status.dataset.running = 'true'; },
-    onStop() { status.textContent = '停止中'; status.dataset.running = 'false'; draw(); },
+    onVariable() { draw(); renderMonitors(); },
+    onClone() { draw(); renderMonitors(); },
+    onDeleteClone() { draw(); renderMonitors(); },
+    onStart() { status.textContent = '実行中'; status.dataset.running = 'true'; renderMonitors(); },
+    onStop() { status.textContent = '停止中'; status.dataset.running = 'false'; draw(); renderMonitors(); },
+    onPause() { status.textContent='一時停止'; },
+    onResume() { status.textContent='実行中'; },
     onError(error, target, block) {
       warning.hidden = false;
       warning.textContent = '実行エラー (' + (target && target.name || 'Sprite') + ' / ' + (block && block.opcode || 'script') + '): ' + error.message;
@@ -285,6 +323,16 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
     runtime.start();
   });
   stop.addEventListener('click', () => runtime.stopAll());
+  const pauseButton=document.getElementById('pause');
+  if(pauseButton) pauseButton.addEventListener('click',()=>{
+    if(runtime.paused) { runtime.resume(); pauseButton.textContent='一時停止'; }
+    else { runtime.pause(); pauseButton.textContent='再開'; }
+  });
+  const fullscreenButton=document.getElementById('fullscreen');
+  if(fullscreenButton) fullscreenButton.addEventListener('click',()=>{
+    if(document.fullscreenElement) document.exitFullscreen?.();
+    else document.documentElement.requestFullscreen?.();
+  });
 
   canvas.addEventListener('pointermove', event => {
     const point = screenPoint(event);
@@ -312,7 +360,9 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
   canvas.style.aspectRatio = stageWidth + ' / ' + stageHeight;
   canvas.style.maxWidth = 'calc((100dvh - 82px) * ' + (stageWidth / stageHeight) + ')';
   if (project.nativeOptions.appearance && project.nativeOptions.appearance.background) document.body.style.background = project.nativeOptions.appearance.background;
+  if (project.nativeOptions.appearance && project.nativeOptions.appearance.foreground) document.body.style.color = project.nativeOptions.appearance.foreground;
   resize();
+  renderMonitors();
   document.getElementById('project-name').textContent = project.projectName || 'Scratch project';
   draw();
   if (project.nativeOptions.custom && project.nativeOptions.custom.js) {
@@ -352,8 +402,10 @@ header{height:58px;flex:0 0 58px;display:flex;align-items:center;gap:10px;paddin
 #status{font-size:12px;color:#aebbd3}
 button{border:0;border-radius:12px;min-height:42px;padding:9px 15px;background:#4c97ff;color:white;font:inherit;font-weight:750;touch-action:manipulation}
 button.secondary{background:#39445e}
-main{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:8px}
+main{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:8px;position:relative}
 #stage{width:100%;height:100%;max-width:100%;max-height:100%;aspect-ratio:4/3;object-fit:contain;background:#202536;border-radius:12px;touch-action:none;box-shadow:0 16px 50px #0005}
+#monitors{position:fixed;z-index:5;left:10px;top:68px;max-width:min(280px,48vw);max-height:38vh;overflow:auto;display:flex;flex-direction:column;gap:5px;padding:7px;border-radius:10px;background:#151a28d9;border:1px solid #64708a88;color:#f4f6ff;font-size:12px;backdrop-filter:blur(10px)}
+.monitor{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:4px 6px;border-radius:6px;background:#30394e}.monitor strong{overflow-wrap:anywhere}.list-monitor{display:block}.monitor textarea{width:100%;margin-top:4px;min-height:42px;border-radius:6px;background:#111827;color:inherit;border:1px solid #64708a;padding:5px;font:inherit}
 #warning{position:fixed;left:10px;right:10px;bottom:max(10px,env(safe-area-inset-bottom));max-height:30vh;overflow:auto;padding:12px 14px;border:1px solid #d69a43;border-radius:12px;background:#3d2c19;color:#ffe1b1;line-height:1.5;white-space:pre-wrap}
 [hidden]{display:none!important}
 ${options.custom && options.custom.css ? options.custom.css.split('</style').join('<\\/style') : ''}
@@ -361,8 +413,9 @@ ${options.custom && options.custom.css ? options.custom.css.split('</style').joi
 </style>
 </head>
 <body>
-<header><span class="brand">Native Scratch</span><span id="project-name"></span><span id="status">停止中</span><button id="start">⚑ 実行</button><button id="stop" class="secondary">停止</button></header>
+<header><span class="brand">Native Scratch</span><span id="project-name"></span><span id="status">停止中</span><button id="start">⚑ 実行</button><button id="stop" class="secondary">停止</button>${options.controls && options.controls.pause && options.controls.pause.enabled ? '<button id="pause" class="secondary">一時停止</button>' : ''}${options.controls && options.controls.fullscreen && options.controls.fullscreen.enabled ? '<button id="fullscreen" class="secondary">全画面</button>' : ''}</header>
 <main><canvas id="stage" aria-label="Scratch project stage"></canvas></main>
+<aside id="monitors" aria-label="変数とリスト"></aside>
 <div id="warning" hidden role="status"></div>
 <script>${source.replace(/<\/script/gi, '<\\/script')}</script>
 </body>
