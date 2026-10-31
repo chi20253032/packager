@@ -375,6 +375,7 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
       draw();
     },
     onVariable() { draw(); renderMonitors(); },
+    onList() { renderMonitors(); },
     onCloudVariable(name,value) { if(cloudEnabledFor({cloud:true,name})) sendCloud(name,value); },
     onClone() { draw(); renderMonitors(); },
     onDeleteClone() { draw(); renderMonitors(); },
