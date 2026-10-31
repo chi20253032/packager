@@ -98,6 +98,8 @@ export class NativeRuntime {
     this.stopAll();
     this.targets = this.originalTargets.slice();
     this.clones = [];
+    for(const target of this.originalTargets) target.clones=[];
+    this.host.stopAllSounds?.(); this.host.penClear?.();
     this.stage = this.targets.find(target => target.isStage) || this.targets[0];
     this.sprites = this.targets.filter(target => !target.isStage);
     this.globalVariables = this.stage ? this.stage.variables : Object.create(null);
@@ -128,14 +130,17 @@ export class NativeRuntime {
 
   async yield(thread) {
     if (thread?.warpDepth > 0) return;
-    if (this.host.yield) return this.host.yield();
+    if (this.host.yield) return this.host.yield(thread);
     return new Promise(resolve => setTimeout(resolve, this.turbo ? 0 : 1000 / this.framerate));
   }
 
   fence(target) {
     if (!this.fencing || target.isStage) return;
-    target.x = this.constructor.clamp(target.x, -this.stageWidth / 2, this.stageWidth / 2);
-    target.y = this.constructor.clamp(target.y, -this.stageHeight / 2, this.stageHeight / 2);
+    const costume=target.costumes[target.currentCostume] || {};
+    const halfWidth=Math.max(1,(Number(costume.rotationCenterX)||48)*Math.abs(target.size||100)/100);
+    const halfHeight=Math.max(1,(Number(costume.rotationCenterY)||36)*Math.abs(target.size||100)/100);
+    target.x=this.constructor.clamp(target.x,-this.stageWidth/2-halfWidth,this.stageWidth/2+halfWidth);
+    target.y=this.constructor.clamp(target.y,-this.stageHeight/2-halfHeight,this.stageHeight/2+halfHeight);
   }
 
   async wait(seconds, thread) {
@@ -293,8 +298,13 @@ export class NativeRuntime {
         if(this.constructor.text(left).trim()!=='' && this.constructor.text(right).trim()!=='' && Number.isFinite(leftNumber) && Number.isFinite(rightNumber)) return leftNumber===rightNumber;
         return this.constructor.text(left).toLowerCase()===this.constructor.text(right).toLowerCase();
       }
-      case 'operator_gt': return this.constructor.number(await a('OPERAND1')) > this.constructor.number(await a('OPERAND2'));
-      case 'operator_lt': return this.constructor.number(await a('OPERAND1')) < this.constructor.number(await a('OPERAND2'));
+      case 'operator_gt': case 'operator_lt': {
+        const left=await a('OPERAND1'), right=await a('OPERAND2');
+        const ln=Number(left), rn=Number(right);
+        const numeric=this.constructor.text(left).trim()!=='' && this.constructor.text(right).trim()!=='' && Number.isFinite(ln) && Number.isFinite(rn);
+        const l=numeric?ln:this.constructor.text(left).toLowerCase(), r=numeric?rn:this.constructor.text(right).toLowerCase();
+        return block.opcode==='operator_gt' ? l>r : l<r;
+      }
       case 'operator_and': return this.constructor.truthy(await a('OPERAND1')) && this.constructor.truthy(await a('OPERAND2'));
       case 'operator_or': return this.constructor.truthy(await a('OPERAND1')) || this.constructor.truthy(await a('OPERAND2'));
       case 'operator_not': return !this.constructor.truthy(await a('OPERAND'));
@@ -302,7 +312,9 @@ export class NativeRuntime {
       case 'operator_length': return this.constructor.text(await a('STRING')).length;
       case 'operator_contains': return this.constructor.text(await a('STRING1')).toLowerCase().includes(this.constructor.text(await a('STRING2')).toLowerCase());
       case 'operator_letter_of': {
-        const str = Array.from(this.constructor.text(await a('STRING'))), index = Math.floor(this.constructor.number(await a('LETTER'))) - 1;
+        const str=Array.from(this.constructor.text(await a('STRING'))), raw=await a('LETTER');
+        const s=this.constructor.text(raw).toLowerCase();
+        const index=(s==='random'||s==='any') ? (str.length?Math.floor(Math.random()*str.length):-1) : Math.floor(this.constructor.number(raw))-1;
         return str[index] || '';
       }
       case 'operator_of': case 'sensing_of': {
@@ -314,10 +326,13 @@ export class NativeRuntime {
       }
       case 'sensing_touchingobject': {
         const who=this.constructor.text(await a('TOUCHINGOBJECTMENU'));
-        if(who==='_mouse_') return this.host.hitTest ? this.host.hitTest(target,this.mouse.x,this.mouse.y) : false;
-        if(who==='_edge_') return target.x < -this.stageWidth/2 || target.x > this.stageWidth/2 || target.y < -this.stageHeight/2 || target.y > this.stageHeight/2;
-        const other=this.targets.find(item=>item.name===who);
-        return !!other && other!==target && Math.hypot(target.x-other.x,target.y-other.y)<42;
+        if(who==='_mouse_') return this.host.hitTest ? this.host.hitTest(target,this.mouse.x,this.mouse.y) : this.overlapsPoint(target,this.mouse.x,this.mouse.y);
+        if(who==='_edge_') {
+          const bounds=this.bounds(target);
+          return bounds.left < -this.stageWidth/2 || bounds.right > this.stageWidth/2 || bounds.top > this.stageHeight/2 || bounds.bottom < -this.stageHeight/2;
+        }
+        const others=who==='_myself_'?[target]:this.targets.filter(item=>item.name===who);
+        return others.some(other=>other!==target && other.alive && this.overlaps(target,other));
       }
       case 'motion_xposition': return target.x;
       case 'motion_yposition': return target.y;
@@ -350,6 +365,26 @@ export class NativeRuntime {
         return 0;
       }
     }
+  }
+
+  bounds(target) {
+    const costume=target.costumes[target.currentCostume] || {};
+    const w=Math.max(1,(Number(costume.rotationCenterX)||24)*2*Math.abs(target.size||100)/100);
+    const h=Math.max(1,(Number(costume.rotationCenterY)||24)*2*Math.abs(target.size||100)/100);
+    const radians=target.rotationStyle==='all around'?(target.direction-90)*Math.PI/180:0;
+    const rw=Math.abs(w*Math.cos(radians))+Math.abs(h*Math.sin(radians));
+    const rh=Math.abs(w*Math.sin(radians))+Math.abs(h*Math.cos(radians));
+    return {left:target.x-rw/2,right:target.x+rw/2,top:target.y+rh/2,bottom:target.y-rh/2};
+  }
+
+  overlapsPoint(target,x,y) {
+    const b=this.bounds(target);
+    return x>=b.left && x<=b.right && y>=b.bottom && y<=b.top;
+  }
+
+  overlaps(a,b) {
+    const x=this.bounds(a), y=this.bounds(b);
+    return x.left<y.right && x.right>y.left && x.bottom<y.top && x.top>y.bottom;
   }
 
   async executeStack(target, firstId, thread) {
@@ -401,7 +436,7 @@ export class NativeRuntime {
           if(target.penDown) this.host.penLine?.(target,oldX,oldY,target.x,target.y);
           this.host.onTargetChange?.(target, block.opcode);
           if (t >= 1) break;
-          await this.yield();
+          await this.yield(thread);
         }
         break;
       }
@@ -507,7 +542,7 @@ export class NativeRuntime {
       case 'control_wait': await this.wait(await n('DURATION'),thread); break;
       case 'control_repeat': {
         const count=this.constructor.clamp(Math.floor(await n('TIMES')),0,100000);
-        for(let i=0;i<count && this.running && !thread.cancelled;i++){await this.substack(target,block,'SUBSTACK',thread);await this.yield();}
+        for(let i=0;i<count && this.running && !thread.cancelled;i++){await this.substack(target,block,'SUBSTACK',thread);await this.yield(thread);}
         break;
       }
       case 'control_forever':
@@ -516,10 +551,10 @@ export class NativeRuntime {
       case 'control_if': if(this.constructor.truthy(await v('CONDITION'))) await this.substack(target,block,'SUBSTACK',thread); break;
       case 'control_if_else': await this.substack(target,block,this.constructor.truthy(await v('CONDITION'))?'SUBSTACK':'SUBSTACK2',thread); break;
       case 'control_repeat_until':
-        while(this.running && !thread.cancelled && !this.constructor.truthy(await v('CONDITION'))){await this.substack(target,block,'SUBSTACK',thread);await new Promise(resolve=>setTimeout(resolve,16));}
+        while(this.running && !thread.cancelled && !this.constructor.truthy(await v('CONDITION'))){await this.substack(target,block,'SUBSTACK',thread);await this.yield(thread);}
         break;
       case 'control_wait_until':
-        while(this.running && !thread.cancelled && !this.constructor.truthy(await v('CONDITION'))) await new Promise(resolve=>setTimeout(resolve,16));
+        while(this.running && !thread.cancelled && !this.constructor.truthy(await v('CONDITION'))) await this.yield(thread);
         break;
       case 'control_stop': {
         const option=this.field(block,'STOP_OPTION','all');
@@ -535,7 +570,14 @@ export class NativeRuntime {
         break;
       }
       case 'control_delete_this_clone':
-        if(!target.isOriginal){target.alive=false;this.stopTarget(target);this.host.onDeleteClone?.(target);}
+        if(!target.isOriginal){
+          target.alive=false; this.stopTarget(target);
+          this.targets=this.targets.filter(item=>item!==target);
+          this.clones=this.clones.filter(item=>item!==target);
+          const owner=this.originalTargets.find(item=>item.id===target.id.split('-clone-')[0]);
+          if(owner) owner.clones=owner.clones.filter(item=>item!==target);
+          this.host.onDeleteClone?.(target);
+        }
         break;
       case 'procedures_call': {
         const proccode=block.mutation?.proccode || this.field(block,'proccode');
@@ -601,7 +643,7 @@ export class NativeRuntime {
   createClone(original) {
     if(this.clones.length>=this.maxClones) return null;
     const clone={...original,id:original.id+'-clone-'+(this.clones.length+1),variables:Object.fromEntries(Object.entries(original.variables).map(([k,v])=>[k,{...v}])),lists:Object.fromEntries(Object.entries(original.lists).map(([k,v])=>[k,{...v,value:v.value.slice()}])),isOriginal:false,alive:true,clones:[],effects:{...original.effects}};
-    this.clones.push(clone);this.targets.push(clone);this.host.onClone?.(clone);
+    this.clones.push(clone);this.targets.push(clone);original.clones.push(clone);this.host.onClone?.(clone);
     for(const block of Object.values(clone.blocks)) if(block?.topLevel&&block.opcode==='control_start_as_clone') this.launch(clone,block);
     return clone;
   }
