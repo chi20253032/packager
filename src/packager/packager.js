@@ -1279,7 +1279,24 @@ cd "$(dirname "$0")"
           }
         }
       }
-      const html = createNativeHTML(projectJSON, this.options.app.windowTitle, this.options);
+      const fileAsDataURL = async file => {
+        if (!file) return null;
+        if (typeof file === 'string') return file;
+        if (typeof file.arrayBuffer !== 'function') return null;
+        const bytes = new Uint8Array(await file.arrayBuffer());
+        let binary = '';
+        for (let offset = 0; offset < bytes.length; offset += 0x8000) {
+          binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
+        }
+        return 'data:' + (file.type || 'application/octet-stream') + ';base64,' + btoa(binary);
+      };
+      const nativeOptions = {
+        ...this.options,
+        app: {...this.options.app, icon: await fileAsDataURL(this.options.app.icon)},
+        cursor: {...this.options.cursor, custom: await fileAsDataURL(this.options.cursor.custom)},
+        loadingScreen: {...this.options.loadingScreen, image: await fileAsDataURL(this.options.loadingScreen.image)}
+      };
+      const html = createNativeHTML(projectJSON, nativeOptions.app.windowTitle, nativeOptions);
       this.ensureNotAborted();
       return {
         data: html,
