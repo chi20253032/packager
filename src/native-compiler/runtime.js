@@ -17,7 +17,7 @@ const truthy = value => {
   if (typeof value === 'string') return value.length > 0 && value !== '0';
   return Boolean(value);
 };
-const NATIVE_RUNTIME_SUPPORTED = new Set(["event_whenflagclicked","event_whenkeypressed","event_whenthisspriteclicked","event_whenstageclicked","event_whenbroadcastreceived","event_whenbackdropswitchesto","control_start_as_clone","motion_movesteps","motion_turnright","motion_turnleft","motion_goto","motion_gotoxy","motion_glidesecstoxy","motion_setx","motion_sety","motion_changexby","motion_changeyby","motion_pointindirection","motion_pointtowards","motion_ifonedgebounce","motion_xposition","motion_yposition","motion_direction","looks_show","looks_hide","looks_setsizeto","looks_changesizeby","looks_nextcostume","looks_switchcostumeto","looks_say","looks_think","looks_sayforsecs","looks_thinkforsecs","looks_gotofrontback","looks_goforwardbackwardlayers","looks_switchbackdropto","looks_switchbackdroptoandwait","looks_nextbackdrop","looks_size","looks_costumenumbername","data_variable","data_setvariableto","data_changevariableby","data_listcontents","data_lengthoflist","data_addtolist","data_deleteoflist","data_deletealloflist","data_insertatlist","data_replaceitemoflist","data_itemoflist","data_itemnumoflist","data_listcontainsitem","control_wait","control_repeat","control_forever","control_if","control_if_else","control_repeat_until","control_wait_until","control_stop","control_create_clone_of","control_delete_this_clone","event_broadcast","event_broadcastandwait","math_number","math_integer","math_whole_number","text","logic_boolean","logic_null","colour_picker","math_add","math_subtract","math_multiply","math_divide","math_modulo","math_round","math_random","math_single","operator_add","operator_subtract","operator_multiply","operator_divide","operator_mod","operator_round","operator_random","operator_mathop","operator_equals","operator_gt","operator_lt","operator_and","operator_or","operator_not","operator_join","operator_length","operator_contains","operator_letter_of","operator_of","sensing_mousex","sensing_mousey","sensing_mousedown","sensing_keypressed","sensing_timer","sensing_resettimer","sensing_answer","sensing_askandwait","sensing_username","sensing_current","sensing_dayssince2000","sensing_distanceto","sensing_touchingobject","sound_sounds_menu","sound_volume","sound_play","sound_playuntildone","sound_setvolumeto","sound_setvolume","sound_changevolumeby","sound_changevolume","sound_stopallsounds","motion_goto_menu","motion_pointtowards_menu","looks_costume","looks_backdrops","event_broadcast_menu","control_create_clone_of_menu","sensing_keyoptions","sensing_touchingobjectmenu","sensing_distancetomenu","sensing_of_object_menu","sensing_of","looks_backdropnumbername","motion_setrotationstyle","looks_cleargraphiceffects","looks_changeeffectby","looks_seteffectto","procedures_call","procedures_definition","procedures_prototype","argument_reporter_string_number","argument_reporter_boolean","pen_clear","pen_eraseAll","pen_penDown","pen_penUp","pen_setPenColorToColor","pen_setPenSizeTo","pen_changePenSizeBy","pen_stamp"]);
+const NATIVE_RUNTIME_SUPPORTED = new Set(["event_whenflagclicked","event_whenkeypressed","event_whenthisspriteclicked","event_whenstageclicked","event_whenbroadcastreceived","event_whenbackdropswitchesto","control_start_as_clone","motion_movesteps","motion_turnright","motion_turnleft","motion_goto","motion_gotoxy","motion_glidesecstoxy","motion_setx","motion_sety","motion_changexby","motion_changeyby","motion_pointindirection","motion_pointtowards","motion_ifonedgebounce","motion_xposition","motion_yposition","motion_direction","looks_show","looks_hide","looks_setsizeto","looks_changesizeby","looks_nextcostume","looks_switchcostumeto","looks_say","looks_think","looks_sayforsecs","looks_thinkforsecs","looks_gotofrontback","looks_goforwardbackwardlayers","looks_switchbackdropto","looks_switchbackdroptoandwait","looks_nextbackdrop","looks_size","looks_costumenumbername","data_variable","data_setvariableto","data_changevariableby","data_listcontents","data_lengthoflist","data_addtolist","data_deleteoflist","data_deletealloflist","data_insertatlist","data_replaceitemoflist","data_itemoflist","data_itemnumoflist","data_listcontainsitem","control_wait","control_repeat","control_forever","control_if","control_if_else","control_repeat_until","control_wait_until","control_stop","control_create_clone_of","control_delete_this_clone","event_broadcast","event_broadcastandwait","math_number","math_integer","math_whole_number","text","logic_boolean","logic_null","colour_picker","math_add","math_subtract","math_multiply","math_divide","math_modulo","math_round","math_random","math_single","operator_add","operator_subtract","operator_multiply","operator_divide","operator_mod","operator_round","operator_random","operator_mathop","operator_equals","operator_gt","operator_lt","operator_and","operator_or","operator_not","operator_join","operator_length","operator_contains","operator_letter_of","operator_of","sensing_mousex","sensing_mousey","sensing_mousedown","sensing_keypressed","sensing_timer","sensing_resettimer","sensing_answer","sensing_askandwait","sensing_username","sensing_current","sensing_dayssince2000","sensing_distanceto","sensing_touchingobject","sound_sounds_menu","sound_volume","sound_play","sound_playuntildone","sound_setvolumeto","sound_setvolume","sound_changevolumeby","sound_changevolume","sound_stopallsounds","motion_goto_menu","motion_pointtowards_menu","looks_costume","looks_backdrops","event_broadcast_menu","control_create_clone_of_menu","sensing_keyoptions","sensing_touchingobjectmenu","sensing_distancetomenu","sensing_of_object_menu","sensing_of","looks_backdropnumbername","motion_setrotationstyle","looks_cleargraphiceffects","looks_changeeffectby","looks_seteffectto","procedures_call","procedures_definition","procedures_prototype","argument_reporter_string_number","argument_reporter_boolean","music_playDrumForBeats","music_restForBeats","music_playNoteForBeats","music_setInstrument","music_changeTempo","music_setTempo","music_getTempo","pen_clear","pen_eraseAll","pen_penDown","pen_penUp","pen_setPenColorToColor","pen_setPenSizeTo","pen_changePenSizeBy","pen_stamp"]);
 
 const keyName = value => ({
   ' ':'space', 'arrowup':'up', 'arrowdown':'down', 'arrowleft':'left',
@@ -49,6 +49,7 @@ export class NativeRuntime {
     this.fencing = this.options.fencing !== false;
     this.turbo = !!this.options.turbo;
     this.framerate = this.constructor.clamp(this.constructor.number(this.options.framerate ?? 30), 1, 240);
+    this.tempo=60; this.instrument=1;
     this.username = this.constructor.text(this.options.username || 'player').replace(/####/g, String(Math.floor(Math.random()*9000)+1000));
     this.running = false;
     this.paused = false;
@@ -288,6 +289,7 @@ export class NativeRuntime {
       case 'sensing_distancetomenu': return this.field(block,'DISTANCETOMENU','');
       case 'sensing_of_object_menu': return this.field(block,'OBJECT','');
       case 'sound_volume': return target.volume;
+      case 'music_getTempo': return this.tempo;
       case 'data_variable': return this.getVariable(target, this.fieldId(block, 'VARIABLE')).value;
       case 'data_listcontents': return this.getList(target, this.fieldId(block, 'LIST')).value.join(' ');
       case 'data_lengthoflist': return this.getList(target, this.fieldId(block, 'LIST')).value.length;
@@ -525,6 +527,20 @@ export class NativeRuntime {
       }
       case 'looks_seteffectto': target.effects[this.field(block,'EFFECT')]=await n('VALUE'); break;
       case 'looks_goforwardbackwardlayers': target.layerOrder += (this.field(block,'FORWARD_BACKWARD')==='forward'?1:-1)*await n('NUM'); break;
+      case 'music_setInstrument': this.instrument=this.constructor.clamp(Math.floor(await n('INSTRUMENT')),1,21); break;
+      case 'music_changeTempo': this.tempo=this.constructor.clamp(this.tempo+await n('TEMPO'),20,500); break;
+      case 'music_setTempo': this.tempo=this.constructor.clamp(await n('TEMPO'),20,500); break;
+      case 'music_playNoteForBeats': {
+        const note=this.constructor.clamp(await n('NOTE'),0,127), beats=Math.max(0,await n('BEATS'));
+        await this.host.playMusicNote?.(note,beats,this.instrument,this.tempo,target);
+        break;
+      }
+      case 'music_playDrumForBeats': {
+        const drum=Math.max(0,Math.floor(await n('DRUM'))), beats=Math.max(0,await n('BEATS'));
+        await this.host.playMusicDrum?.(drum,beats,this.tempo,target);
+        break;
+      }
+      case 'music_restForBeats': await this.wait(Math.max(0,await n('BEATS'))*60/this.tempo,thread); break;
       case 'pen_clear': case 'pen_eraseAll': this.host.penClear?.(); break;
       case 'pen_penDown': target.penDown=true; break;
       case 'pen_penUp': target.penDown=false; break;
