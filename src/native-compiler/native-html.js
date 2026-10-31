@@ -54,6 +54,7 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
   };
   const monitorPanel = document.getElementById('monitors');
   const images = new Map();
+  const assetObjectURLs = new Set();
   const imageFor = costume => {
     if (!costume) return null;
     const asset = costume.md5ext || (costume.assetId && (costume.assetId + '.' + costume.dataFormat));
@@ -63,10 +64,16 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
     const format = String(costume.dataFormat || asset.split('.').pop() || 'png').toLowerCase();
     const mime = format === 'svg' ? 'image/svg+xml' : (format === 'jpg' || format === 'jpeg' ? 'image/jpeg' : 'image/png');
     const image = new Image();
+    const binary=atob(encoded), bytes=new Uint8Array(binary.length);
+    for(let i=0;i<binary.length;i++) bytes[i]=binary.charCodeAt(i);
+    const objectURL=URL.createObjectURL(new Blob([bytes],{type:mime}));
+    assetObjectURLs.add(objectURL);
     totalImageAssets++;
-    image.addEventListener('load',()=>{ loadedImageAssets++; draw(); updateLoading(); },{once:true});
-    image.addEventListener('error',()=>{ loadedImageAssets++; warning.hidden=false; warning.textContent='画像アセットを読み込めません: '+asset; updateLoading(); },{once:true});
-    image.src = 'data:' + mime + ';base64,' + encoded;
+    const releaseURL=()=>{ URL.revokeObjectURL(objectURL); assetObjectURLs.delete(objectURL); };
+    image.addEventListener('load',()=>{ loadedImageAssets++; releaseURL(); scheduleDraw(); updateLoading(); },{once:true});
+    image.addEventListener('error',()=>{ loadedImageAssets++; releaseURL(); warning.hidden=false; warning.textContent='画像アセットを読み込めません: '+asset; updateLoading(); },{once:true});
+    image.src = objectURL;
+    delete project.nativeAssets[asset];
     images.set(asset, image);
     return image;
   };
@@ -113,10 +120,13 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
       if(!mask) {
         const bitmap=document.createElement('canvas'); bitmap.width=image.naturalWidth; bitmap.height=image.naturalHeight;
         const bitmapContext=bitmap.getContext('2d',{willReadFrequently:true}); bitmapContext.drawImage(image,0,0);
-        mask={width:bitmap.width,height:bitmap.height,data:bitmapContext.getImageData(0,0,bitmap.width,bitmap.height).data};
+        const rgba=bitmapContext.getImageData(0,0,bitmap.width,bitmap.height).data;
+        const alpha=new Uint8Array(bitmap.width*bitmap.height);
+        for(let i=0;i<alpha.length;i++) alpha[i]=rgba[i*4+3];
+        mask={width:bitmap.width,height:bitmap.height,alpha};
         alphaMasks.set(image,mask);
       }
-      return mask.data[(py*mask.width+px)*4+3]>8;
+      return mask.alpha[py*mask.width+px]>8;
     } catch (_) {
       return true;
     }
@@ -144,7 +154,7 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
         const binary = atob(encoded);
         const bytes = new Uint8Array(binary.length);
         for (let i=0;i<binary.length;i++) bytes[i] = binary.charCodeAt(i);
-        audioBuffers.set(asset, audio.decodeAudioData(bytes.buffer));
+        audioBuffers.set(asset, audio.decodeAudioData(bytes.buffer).then(buffer=>{ delete project.nativeAssets[asset]; return buffer; }));
       }
       const buffer = await audioBuffers.get(asset);
       await audio.resume();
@@ -283,6 +293,19 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
     if(!monitorPanel.childElementCount) { const empty=document.createElement('span'); empty.textContent='表示できる変数・リストはありません'; monitorPanel.append(empty); }
   };
 
+  let drawScheduled=false;
+  const scheduleDraw=()=>{
+    if(drawScheduled) return;
+    drawScheduled=true;
+    requestAnimationFrame(()=>{drawScheduled=false;draw();});
+  };
+  let monitorsScheduled=false;
+  const scheduleMonitors=()=>{
+    if(monitorsScheduled) return;
+    monitorsScheduled=true;
+    requestAnimationFrame(()=>{monitorsScheduled=false;renderMonitors();});
+  };
+
   const draw = () => {
     if (!context) return;
     const width = canvas.width / dpr;
@@ -368,8 +391,8 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
         for (const costume of costumesFor(target)) imageFor(costume);
       }
     },
-    onTargetChange() { draw(); },
-    penClear() { penContext.clearRect(0, 0, penCanvas.width, penCanvas.height); draw(); },
+    onTargetChange() { scheduleDraw(); },
+    penClear() { penContext.clearRect(0, 0, penCanvas.width, penCanvas.height); scheduleDraw(); },
     penLine(target, x1, y1, x2, y2) {
       penContext.strokeStyle = target.penColor || '#000000';
       penContext.lineWidth = Math.max(1, target.penSize || 1);
@@ -379,7 +402,7 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
       penContext.moveTo(x1 + stageWidth / 2, stageHeight / 2 - y1);
       penContext.lineTo(x2 + stageWidth / 2, stageHeight / 2 - y2);
       penContext.stroke();
-      draw();
+      scheduleDraw();
     },
     penStamp(target) {
       const costume = currentCostume(target), image = imageFor(costume);
@@ -392,16 +415,16 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
       const cy = Number.isFinite(costume.rotationCenterY) ? costume.rotationCenterY : image.naturalHeight / 2;
       penContext.drawImage(image, -cx, -cy);
       penContext.restore();
-      draw();
+      scheduleDraw();
     },
-    onVariable() { draw(); renderMonitors(); },
-    onList() { renderMonitors(); },
-    onMonitorChange() { renderMonitors(); },
+    onVariable() { scheduleDraw(); scheduleMonitors(); },
+    onList() { scheduleMonitors(); },
+    onMonitorChange() { scheduleMonitors(); },
     onCloudVariable(name,value) { if(cloudEnabledFor({cloud:true,name})) sendCloud(name,value); },
-    onClone() { draw(); renderMonitors(); },
-    onDeleteClone() { draw(); renderMonitors(); },
-    onStart() { status.textContent = '実行中'; status.dataset.running = 'true'; renderMonitors(); },
-    onStop() { status.textContent = '停止中'; status.dataset.running = 'false'; draw(); renderMonitors(); },
+    onClone() { scheduleDraw(); scheduleMonitors(); },
+    onDeleteClone() { scheduleDraw(); scheduleMonitors(); },
+    onStart() { status.textContent = '実行中'; status.dataset.running = 'true'; scheduleMonitors(); },
+    onStop() { status.textContent = '停止中'; status.dataset.running = 'false'; scheduleDraw(); scheduleMonitors(); },
     onPause() { status.textContent='一時停止'; },
     onResume() { status.textContent='実行中'; },
     onError(error, target, block) {
@@ -432,7 +455,7 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
     runtime.start();
   });
   stop.addEventListener('click', () => runtime.stopAll());
-  window.addEventListener('beforeunload',()=>{ if(cloudSocket) cloudSocket.close(); });
+  window.addEventListener('beforeunload',()=>{ if(cloudSocket) cloudSocket.close(); for(const url of assetObjectURLs) URL.revokeObjectURL(url); assetObjectURLs.clear(); });
   const pauseButton=document.getElementById('pause');
   if(pauseButton) pauseButton.addEventListener('click',()=>{
     if(runtime.paused) { runtime.resume(); pauseButton.textContent='一時停止'; }
