@@ -40,6 +40,8 @@ export class NativeRuntime {
   constructor(project, host = {}) {
     if (!project || !Array.isArray(project.targets)) throw new Error('Invalid SB3 project: targets missing');
     this.project = project;
+    this.monitors = new Map((project.monitors || []).map(monitor => [monitor.id, {...monitor}]));
+    this.initialMonitors = new Map(this.monitors);
     this.host = host;
     this.extensions = host.extensions || Object.create(null);
     this.options = project.nativeOptions || {};
@@ -64,8 +66,8 @@ export class NativeRuntime {
     this.originalTargets = this.targets.slice();
     this.initialState = new Map(this.originalTargets.map(target => [target, {
       x:target.x, y:target.y, direction:target.direction, size:target.size, visible:target.visible,
-      currentCostume:target.currentCostume, volume:target.volume, layerOrder:target.layerOrder,
-      penDown:target.penDown, penColor:target.penColor, penSize:target.penSize,
+      currentCostume:target.currentCostume, volume:target.volume, layerOrder:target.layerOrder, rotationStyle:target.rotationStyle,
+      effects:{...target.effects}, penDown:target.penDown, penColor:target.penColor, penSize:target.penSize,
       variables:Object.fromEntries(Object.entries(target.variables).map(([id, item]) => [id, item.value])),
       lists:Object.fromEntries(Object.entries(target.lists).map(([id, item]) => [id, item.value.slice()]))
     }]));
@@ -107,12 +109,15 @@ export class NativeRuntime {
     this.globalLists = this.stage ? this.stage.lists : Object.create(null);
     for (const target of this.originalTargets) {
       const initial = this.initialState.get(target);
-      Object.assign(target, {x:initial.x,y:initial.y,direction:initial.direction,size:initial.size,visible:initial.visible,currentCostume:initial.currentCostume,volume:initial.volume,layerOrder:initial.layerOrder,penDown:initial.penDown,penColor:initial.penColor,penSize:initial.penSize,alive:true,bubble:null,effects:{}});
+      Object.assign(target, {x:initial.x,y:initial.y,direction:initial.direction,size:initial.size,visible:initial.visible,currentCostume:initial.currentCostume,volume:initial.volume,layerOrder:initial.layerOrder,rotationStyle:initial.rotationStyle,penDown:initial.penDown,penColor:initial.penColor,penSize:initial.penSize,alive:true,bubble:null,effects:{...initial.effects}});
       for (const [id, value] of Object.entries(initial.variables)) target.variables[id].value = value;
       for (const [id, value] of Object.entries(initial.lists)) target.lists[id].value = value.slice();
     }
+    this.monitors=new Map(this.initialMonitors);
+    this.answer=''; this.tempo=60; this.instrument=1; this.keys.clear(); this.mouse={x:0,y:0,down:false};
     this.running = true;
     this.paused = false;
+    this.frame=0;
     this.startedAt = performance.now();
     this.runHat('event_whenflagclicked');
     this.host.onStart?.();
@@ -145,12 +150,12 @@ export class NativeRuntime {
   }
 
   fence(target) {
-    if (!this.fencing || target.isStage) return;
-    const costume=target.costumes[target.currentCostume] || {};
-    const halfWidth=Math.max(1,(Number(costume.rotationCenterX)||48)*Math.abs(target.size||100)/100);
-    const halfHeight=Math.max(1,(Number(costume.rotationCenterY)||36)*Math.abs(target.size||100)/100);
-    target.x=this.constructor.clamp(target.x,-this.stageWidth/2-halfWidth,this.stageWidth/2+halfWidth);
-    target.y=this.constructor.clamp(target.y,-this.stageHeight/2-halfHeight,this.stageHeight/2+halfHeight);
+    if(!this.fencing || target.isStage) return;
+    const bounds=this.bounds(target);
+    const halfWidth=Math.min(this.stageWidth/2,Math.max(1,(bounds.right-bounds.left)/2));
+    const halfHeight=Math.min(this.stageHeight/2,Math.max(1,(bounds.top-bounds.bottom)/2));
+    target.x=this.constructor.clamp(target.x,-this.stageWidth/2+halfWidth,this.stageWidth/2-halfWidth);
+    target.y=this.constructor.clamp(target.y,-this.stageHeight/2+halfHeight,this.stageHeight/2-halfHeight);
   }
 
   async wait(seconds, thread) {
@@ -178,6 +183,12 @@ export class NativeRuntime {
 
   getList(target, id) {
     return target.lists[id] || this.globalLists[id] || {value: []};
+  }
+
+  setMonitorVisible(id,visible) {
+    const current=this.monitors.get(id)||{id,mode:'default'};
+    this.monitors.set(id,{...current,visible:!!visible});
+    this.host.onMonitorChange?.(id,!!visible);
   }
 
   applyCloudVariable(name,value) {
@@ -477,11 +488,12 @@ export class NativeRuntime {
         break;
       }
       case 'motion_ifonedgebounce': {
+        const bounds=this.bounds(target);
         let dx=Math.sin(target.direction*Math.PI/180),dy=Math.cos(target.direction*Math.PI/180);
-        if(target.x>this.stageWidth/2-20||target.x< -this.stageWidth/2+20)dx=-dx;
-        if(target.y>this.stageHeight/2-20||target.y< -this.stageHeight/2+20)dy=-dy;
-        target.x=this.constructor.clamp(target.x,-this.stageWidth/2+20,this.stageWidth/2-20);target.y=this.constructor.clamp(target.y,-this.stageHeight/2+20,this.stageHeight/2-20);
+        if(bounds.left< -this.stageWidth/2 || bounds.right>this.stageWidth/2) dx=-dx;
+        if(bounds.bottom< -this.stageHeight/2 || bounds.top>this.stageHeight/2) dy=-dy;
         target.direction=Math.atan2(dx,dy)*180/Math.PI;
+        this.fence(target);
         break;
       }
       case 'motion_setrotationstyle': target.rotationStyle=this.field(block,'STYLE','all around'); break;
@@ -566,14 +578,20 @@ export class NativeRuntime {
       }
       case 'data_addtolist': { const id=this.fieldId(block,'LIST'),list=this.getList(target,id).value; list.push(await v('ITEM')); this.host.onList?.(target,id,list); break; }
       case 'data_deleteoflist': {
-        const list=this.getList(target,this.fieldId(block,'LIST')).value, index=this.listIndex(await v('INDEX'),list.length);
-        if (index>=0) list.splice(index,1); this.host.onList?.(target,this.fieldId(block,'LIST'),list); break;
+        const id=this.fieldId(block,'LIST'),list=this.getList(target,id).value,indexValue=await v('INDEX');
+        if(this.constructor.text(indexValue).toLowerCase()==='all') list.length=0;
+        else { const index=this.listIndex(indexValue,list.length); if(index>=0) list.splice(index,1); }
+        this.host.onList?.(target,id,list); break;
       }
       case 'data_deletealloflist': this.getList(target,this.field(block,'LIST')).value.length=0; break;
       case 'data_insertatlist': {
         const list=this.getList(target,this.field(block,'LIST')).value, index=this.listIndex(await v('INDEX'),list.length,true);
         list.splice(index,0,await v('ITEM')); this.host.onList?.(target,this.fieldId(block,'LIST'),list); break;
       }
+      case 'data_showvariable': this.setMonitorVisible(this.fieldId(block,'VARIABLE'),true); break;
+      case 'data_hidevariable': this.setMonitorVisible(this.fieldId(block,'VARIABLE'),false); break;
+      case 'data_showlist': this.setMonitorVisible(this.fieldId(block,'LIST'),true); break;
+      case 'data_hidelist': this.setMonitorVisible(this.fieldId(block,'LIST'),false); break;
       case 'data_replaceitemoflist': {
         const list=this.getList(target,this.field(block,'LIST')).value, index=this.listIndex(await v('INDEX'),list.length);
         if (index>=0) list[index]=await v('ITEM'); this.host.onList?.(target,this.fieldId(block,'LIST'),list); break;
