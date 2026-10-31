@@ -117,15 +117,19 @@ export class NativeRuntime {
   }
 
   stopAll() {
-    this.running = false;
-    for (const thread of this.threads) thread.cancelled = true;
+    this.running=false;
+    for(const thread of this.threads) thread.cancelled=true;
     this.threads.clear();
-    this.targets.forEach(target => { target.alive = true; });
+    for(const clone of this.clones) { clone.alive=false; this.host.onDeleteClone?.(clone); }
+    this.clones=[];
+    for(const target of this.originalTargets) { target.alive=true; target.clones=[]; }
+    this.targets=this.originalTargets.slice();
+    this.host.stopAllSounds?.();
     this.host.onStop?.();
   }
 
-  stopTarget(target) {
-    for (const thread of this.threads) if (thread.target === target) thread.cancelled = true;
+  stopTarget(target, except = null) {
+    for(const thread of this.threads) if(thread.target===target && thread!==except) thread.cancelled=true;
   }
 
   async yield(thread) {
@@ -559,7 +563,7 @@ export class NativeRuntime {
         break;
       case 'control_stop': {
         const option=this.field(block,'STOP_OPTION','all');
-        if(option==='all') this.stopAll(); else if(option==='this script') thread.cancelled=true; else this.stopTarget(target);
+        if(option==='all') this.stopAll(); else if(option==='this script') thread.cancelled=true; else this.stopTarget(target,thread);
         break;
       }
       case 'event_broadcast': await this.broadcast(this.constructor.text(await v('BROADCAST_INPUT')),false); break;
@@ -644,7 +648,7 @@ export class NativeRuntime {
   createClone(original) {
     if(this.clones.length>=this.maxClones) return null;
     const sourceOriginal=original.isOriginal?original:(original.sourceOriginal||original);
-    const clone={...original,id:sourceOriginal.id+'-clone-'+(this.clones.length+1),sourceOriginal,variables:Object.fromEntries(Object.entries(original.variables).map(([k,v])=>[k,{...v}])),lists:Object.fromEntries(Object.entries(original.lists).map(([k,v])=>[k,{...v,value:v.value.slice()}])),isOriginal:false,alive:true,clones:[],effects:{...original.effects}};
+    const clone={...original,id:sourceOriginal.id+'-clone-'+(this.clones.length+1),sourceOriginal,clones:[],variables:Object.fromEntries(Object.entries(original.variables).map(([k,v])=>[k,{...v}])),lists:Object.fromEntries(Object.entries(original.lists).map(([k,v])=>[k,{...v,value:v.value.slice()}])),isOriginal:false,alive:true,clones:[],effects:{...original.effects}};
     this.clones.push(clone);this.targets.push(clone);original.clones.push(clone);this.host.onClone?.(clone);
     for(const block of Object.values(clone.blocks)) if(block?.topLevel&&block.opcode==='control_start_as_clone') this.launch(clone,block);
     return clone;
