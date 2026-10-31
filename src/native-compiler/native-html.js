@@ -73,13 +73,31 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
   };
   const costumesFor = target => target.costumes || [];
   const currentCostume = target => costumesFor(target)[Math.max(0, Math.min(costumesFor(target).length - 1, target.currentCostume || 0))];
+  const alphaMasks = new WeakMap();
   const hitTest = (target, x, y) => {
-    const costume = currentCostume(target);
-    const image = imageFor(costume);
-    const scale = (target.size || 100) / 100;
-    const width = image && image.naturalWidth ? image.naturalWidth * scale : 42 * scale;
-    const height = image && image.naturalHeight ? image.naturalHeight * scale : 42 * scale;
-    return Math.abs(x - target.x) <= width / 2 && Math.abs(y - target.y) <= height / 2;
+    if (!target || !target.visible || !target.alive) return false;
+    const costume=currentCostume(target), image=imageFor(costume), scale=Math.max(0.001,Math.abs(target.size||100)/100);
+    const angle=target.rotationStyle==='all around'?((target.direction||90)-90)*Math.PI/180:0;
+    const dx=x-target.x, dy=-(y-target.y);
+    const localX=(dx*Math.cos(angle)+dy*Math.sin(angle))/scale;
+    const localY=(-dx*Math.sin(angle)+dy*Math.cos(angle))/scale;
+    const cx=Number.isFinite(costume?.rotationCenterX)?costume.rotationCenterX:(image?.naturalWidth||48)/2;
+    const cy=Number.isFinite(costume?.rotationCenterY)?costume.rotationCenterY:(image?.naturalHeight||48)/2;
+    const px=Math.floor(localX+cx), py=Math.floor(localY+cy);
+    if(!image || !image.complete || !image.naturalWidth) return Math.abs(localX)<=24 && Math.abs(localY)<=24;
+    if(px<0 || py<0 || px>=image.naturalWidth || py>=image.naturalHeight) return false;
+    try {
+      let mask=alphaMasks.get(image);
+      if(!mask) {
+        const bitmap=document.createElement('canvas'); bitmap.width=image.naturalWidth; bitmap.height=image.naturalHeight;
+        const bitmapContext=bitmap.getContext('2d',{willReadFrequently:true}); bitmapContext.drawImage(image,0,0);
+        mask={width:bitmap.width,height:bitmap.height,data:bitmapContext.getImageData(0,0,bitmap.width,bitmap.height).data};
+        alphaMasks.set(image,mask);
+      }
+      return mask.data[(py*mask.width+px)*4+3]>8;
+    } catch (_) {
+      return true;
+    }
   };
   let audioContext = null;
   const audioBuffers = new Map();
@@ -138,6 +156,11 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
     if (target.rotationStyle === 'all around') context.rotate(((target.direction == null ? 90 : target.direction) - 90) * Math.PI / 180);
     else if (target.rotationStyle === 'left-right' && target.direction < 0) context.scale(-1, 1);
     context.scale((target.size || 100) / 100, (target.size || 100) / 100);
+    const effects=target.effects||{};
+    const brightness=Math.max(-100,Math.min(100,Number(effects.brightness)||0));
+    const color=Math.max(0,Math.min(200,Number(effects.color)||0));
+    context.filter='brightness('+(1+brightness/100)+') hue-rotate('+(color*1.8)+'deg)';
+    context.globalAlpha=Math.max(0,1-(Number(effects.ghost)||0)/100);
     if (image && image.complete && image.naturalWidth) {
       const cx = Number.isFinite(costume.rotationCenterX) ? costume.rotationCenterX : image.naturalWidth / 2;
       const cy = Number.isFinite(costume.rotationCenterY) ? costume.rotationCenterY : image.naturalHeight / 2;
@@ -190,7 +213,12 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
       context.drawImage(backdropImage, 0, 0, stageWidth, stageHeight);
     }
     if (penCanvas.width) context.drawImage(penCanvas, 0, 0, stageWidth, stageHeight);
-    if (runtime) runtime.targets.filter(target => !target.isStage).sort((a,b) => a.layerOrder-b.layerOrder).forEach(drawTarget);
+    if (runtime) {
+      context.save();
+      context.translate(stageWidth/2,stageHeight/2);
+      runtime.targets.filter(target => !target.isStage).sort((a,b) => a.layerOrder-b.layerOrder).forEach(drawTarget);
+      context.restore();
+    }
     context.restore();
   };
 
