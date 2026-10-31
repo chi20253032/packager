@@ -166,6 +166,35 @@ describe('native runtime v2',()=>{
     expect(runtime.targets).toEqual(runtime.originalTargets);
   });
 
+  test('implements native Music extension tempo and note dispatch',async()=>{
+    const notes=[];
+    const project=makeProject({
+      flag:makeBlock('event_whenflagclicked','tempo',{}, {},true),
+      tempo:makeBlock('music_setTempo','instrument',{TEMPO:[1,[4,'120']]}),
+      instrument:makeBlock('music_setInstrument','note',{INSTRUMENT:[1,[4,'3']]}),
+      note:makeBlock('music_playNoteForBeats',null,{NOTE:[1,[4,'69']],BEATS:[1,[4,'0.5']]})
+    });
+    const runtime=new NativeRuntime(project,{playMusicNote:async(...args)=>notes.push(args.slice(0,4))});
+    runtime.start();
+    await new Promise(resolve=>setTimeout(resolve,10));
+    expect(runtime.tempo).toBe(120);
+    expect(runtime.instrument).toBe(3);
+    expect(notes[0]).toEqual([69,0.5,3,120]);
+    runtime.stopAll();
+  });
+
+  test('sends native cloud variable changes through the host bridge',()=>{
+    const project=makeProject({});
+    project.targets[1].variables.score[2]=true;
+    const updates=[];
+    const runtime=new NativeRuntime(project,{onCloudVariable:(name,value)=>updates.push([name,value])});
+    runtime.setVariable(runtime.sprites[0],'score',12);
+    expect(updates).toEqual([['score',12]]);
+    runtime.applyCloudVariable('score','21');
+    expect(runtime.sprites[0].variables.score.value).toBe('21');
+    expect(updates).toHaveLength(1);
+  });
+
   test('executes registered native extension reporters',async()=>{
     const project=makeProject({
       flag:makeBlock('event_whenflagclicked','set',{}, {},true),
