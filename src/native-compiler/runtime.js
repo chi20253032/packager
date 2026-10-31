@@ -17,7 +17,7 @@ const truthy = value => {
   if (typeof value === 'string') return value.length > 0 && value !== '0';
   return Boolean(value);
 };
-const NATIVE_RUNTIME_SUPPORTED = new Set(["event_whenflagclicked","event_whenkeypressed","event_whenthisspriteclicked","event_whenstageclicked","event_whenbroadcastreceived","event_whenbackdropswitchesto","control_start_as_clone","motion_movesteps","motion_turnright","motion_turnleft","motion_goto","motion_gotoxy","motion_glidesecstoxy","motion_setx","motion_sety","motion_changexby","motion_changeyby","motion_pointindirection","motion_pointtowards","motion_ifonedgebounce","motion_xposition","motion_yposition","motion_direction","looks_show","looks_hide","looks_setsizeto","looks_changesizeby","looks_nextcostume","looks_switchcostumeto","looks_say","looks_think","looks_sayforsecs","looks_thinkforsecs","looks_gotofrontback","looks_goforwardbackwardlayers","looks_switchbackdropto","looks_switchbackdroptoandwait","looks_nextbackdrop","looks_size","looks_costumenumbername","data_variable","data_setvariableto","data_changevariableby","data_listcontents","data_lengthoflist","data_addtolist","data_deleteoflist","data_deletealloflist","data_insertatlist","data_replaceitemoflist","data_itemoflist","data_itemnumoflist","data_listcontainsitem","control_wait","control_repeat","control_forever","control_if","control_if_else","control_repeat_until","control_wait_until","control_stop","control_create_clone_of","control_delete_this_clone","event_broadcast","event_broadcastandwait","math_number","math_integer","math_whole_number","text","logic_boolean","logic_null","colour_picker","math_add","math_subtract","math_multiply","math_divide","math_modulo","math_round","math_random","math_single","operator_add","operator_subtract","operator_multiply","operator_divide","operator_mod","operator_round","operator_random","operator_mathop","operator_equals","operator_gt","operator_lt","operator_and","operator_or","operator_not","operator_join","operator_length","operator_contains","operator_letter_of","operator_of","sensing_mousex","sensing_mousey","sensing_mousedown","sensing_keypressed","sensing_timer","sensing_resettimer","sensing_answer","sensing_askandwait","sensing_username","sensing_current","sensing_dayssince2000","sensing_distanceto","sensing_touchingobject","sound_sounds_menu","sound_volume","sound_play","sound_playuntildone","sound_setvolumeto","sound_setvolume","sound_changevolumeby","sound_changevolume","sound_stopallsounds","motion_goto_menu","motion_pointtowards_menu","looks_costume","looks_backdrops","event_broadcast_menu","control_create_clone_of_menu","sensing_keyoptions","sensing_touchingobjectmenu","sensing_distancetomenu","sensing_of_object_menu","sensing_of","looks_backdropnumbername","motion_setrotationstyle","looks_cleargraphiceffects","looks_changeeffectby","looks_seteffectto","procedures_call","pen_clear","pen_eraseAll","pen_penDown","pen_penUp","pen_setPenColorToColor","pen_setPenSizeTo","pen_changePenSizeBy","pen_stamp"]);
+const NATIVE_RUNTIME_SUPPORTED = new Set(["event_whenflagclicked","event_whenkeypressed","event_whenthisspriteclicked","event_whenstageclicked","event_whenbroadcastreceived","event_whenbackdropswitchesto","control_start_as_clone","motion_movesteps","motion_turnright","motion_turnleft","motion_goto","motion_gotoxy","motion_glidesecstoxy","motion_setx","motion_sety","motion_changexby","motion_changeyby","motion_pointindirection","motion_pointtowards","motion_ifonedgebounce","motion_xposition","motion_yposition","motion_direction","looks_show","looks_hide","looks_setsizeto","looks_changesizeby","looks_nextcostume","looks_switchcostumeto","looks_say","looks_think","looks_sayforsecs","looks_thinkforsecs","looks_gotofrontback","looks_goforwardbackwardlayers","looks_switchbackdropto","looks_switchbackdroptoandwait","looks_nextbackdrop","looks_size","looks_costumenumbername","data_variable","data_setvariableto","data_changevariableby","data_listcontents","data_lengthoflist","data_addtolist","data_deleteoflist","data_deletealloflist","data_insertatlist","data_replaceitemoflist","data_itemoflist","data_itemnumoflist","data_listcontainsitem","control_wait","control_repeat","control_forever","control_if","control_if_else","control_repeat_until","control_wait_until","control_stop","control_create_clone_of","control_delete_this_clone","event_broadcast","event_broadcastandwait","math_number","math_integer","math_whole_number","text","logic_boolean","logic_null","colour_picker","math_add","math_subtract","math_multiply","math_divide","math_modulo","math_round","math_random","math_single","operator_add","operator_subtract","operator_multiply","operator_divide","operator_mod","operator_round","operator_random","operator_mathop","operator_equals","operator_gt","operator_lt","operator_and","operator_or","operator_not","operator_join","operator_length","operator_contains","operator_letter_of","operator_of","sensing_mousex","sensing_mousey","sensing_mousedown","sensing_keypressed","sensing_timer","sensing_resettimer","sensing_answer","sensing_askandwait","sensing_username","sensing_current","sensing_dayssince2000","sensing_distanceto","sensing_touchingobject","sound_sounds_menu","sound_volume","sound_play","sound_playuntildone","sound_setvolumeto","sound_setvolume","sound_changevolumeby","sound_changevolume","sound_stopallsounds","motion_goto_menu","motion_pointtowards_menu","looks_costume","looks_backdrops","event_broadcast_menu","control_create_clone_of_menu","sensing_keyoptions","sensing_touchingobjectmenu","sensing_distancetomenu","sensing_of_object_menu","sensing_of","looks_backdropnumbername","motion_setrotationstyle","looks_cleargraphiceffects","looks_changeeffectby","looks_seteffectto","procedures_call","procedures_definition","procedures_prototype","argument_reporter_string_number","argument_reporter_boolean","pen_clear","pen_eraseAll","pen_penDown","pen_penUp","pen_setPenColorToColor","pen_setPenSizeTo","pen_changePenSizeBy","pen_stamp"]);
 
 const keyName = value => ({
   ' ':'space', 'arrowup':'up', 'arrowdown':'down', 'arrowleft':'left',
@@ -282,8 +282,9 @@ export class NativeRuntime {
       }
       case 'math_round': case 'operator_round': return Math.round(this.constructor.number(await a('NUM')));
       case 'math_random': case 'operator_random': {
-        const x = this.constructor.number(await a('FROM')), y = this.constructor.number(await a('TO'));
-        return Math.floor(Math.random() * (Math.abs(y - x) + 1)) + Math.min(x, y);
+        const rawX=await a('FROM'), rawY=await a('TO');
+        const x=this.constructor.number(rawX), y=this.constructor.number(rawY), low=Math.min(x,y), high=Math.max(x,y);
+        return Number.isInteger(x) && Number.isInteger(y) ? Math.floor(Math.random()*(high-low+1))+low : Math.random()*(high-low)+low;
       }
       case 'math_single': case 'operator_mathop': {
         const n = this.constructor.number(await a('NUM')), op = this.field(block, 'OPERATOR');
@@ -546,7 +547,7 @@ export class NativeRuntime {
         break;
       }
       case 'control_forever':
-        while(this.running && !thread.cancelled && target.alive){await this.substack(target,block,'SUBSTACK',thread);await this.yield();}
+        while(this.running && !thread.cancelled && target.alive){await this.substack(target,block,'SUBSTACK',thread);await this.yield(thread);}
         break;
       case 'control_if': if(this.constructor.truthy(await v('CONDITION'))) await this.substack(target,block,'SUBSTACK',thread); break;
       case 'control_if_else': await this.substack(target,block,this.constructor.truthy(await v('CONDITION'))?'SUBSTACK':'SUBSTACK2',thread); break;
@@ -574,7 +575,7 @@ export class NativeRuntime {
           target.alive=false; this.stopTarget(target);
           this.targets=this.targets.filter(item=>item!==target);
           this.clones=this.clones.filter(item=>item!==target);
-          const owner=this.originalTargets.find(item=>item.id===target.id.split('-clone-')[0]);
+          const owner=target.sourceOriginal || this.originalTargets.find(item=>item.id===target.id.split('-clone-')[0]);
           if(owner) owner.clones=owner.clones.filter(item=>item!==target);
           this.host.onDeleteClone?.(target);
         }
@@ -618,7 +619,7 @@ export class NativeRuntime {
         break;
       }
     }
-    if(target.penDown && (target.x!==previousX || target.y!==previousY)) this.host.penLine?.(target,previousX,previousY,target.x,target.y);
+    if(block.opcode!=='motion_glidesecstoxy' && target.penDown && (target.x!==previousX || target.y!==previousY)) this.host.penLine?.(target,previousX,previousY,target.x,target.y);
     this.host.onTargetChange?.(target,block.opcode);
   }
 
@@ -642,7 +643,8 @@ export class NativeRuntime {
 
   createClone(original) {
     if(this.clones.length>=this.maxClones) return null;
-    const clone={...original,id:original.id+'-clone-'+(this.clones.length+1),variables:Object.fromEntries(Object.entries(original.variables).map(([k,v])=>[k,{...v}])),lists:Object.fromEntries(Object.entries(original.lists).map(([k,v])=>[k,{...v,value:v.value.slice()}])),isOriginal:false,alive:true,clones:[],effects:{...original.effects}};
+    const sourceOriginal=original.isOriginal?original:(original.sourceOriginal||original);
+    const clone={...original,id:sourceOriginal.id+'-clone-'+(this.clones.length+1),sourceOriginal,variables:Object.fromEntries(Object.entries(original.variables).map(([k,v])=>[k,{...v}])),lists:Object.fromEntries(Object.entries(original.lists).map(([k,v])=>[k,{...v,value:v.value.slice()}])),isOriginal:false,alive:true,clones:[],effects:{...original.effects}};
     this.clones.push(clone);this.targets.push(clone);original.clones.push(clone);this.host.onClone?.(clone);
     for(const block of Object.values(clone.blocks)) if(block?.topLevel&&block.opcode==='control_start_as_clone') this.launch(clone,block);
     return clone;
