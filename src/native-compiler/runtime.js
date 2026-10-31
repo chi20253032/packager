@@ -111,6 +111,7 @@ export class NativeRuntime {
       for (const [id, value] of Object.entries(initial.lists)) target.lists[id].value = value.slice();
     }
     this.running = true;
+    this.paused = false;
     this.startedAt = performance.now();
     this.runHat('event_whenflagclicked');
     this.host.onStart?.();
@@ -132,10 +133,14 @@ export class NativeRuntime {
     for(const thread of this.threads) if(thread.target===target && thread!==except) thread.cancelled=true;
   }
 
+  pause() { this.paused=true; this.host.onPause?.(); }
+  resume() { this.paused=false; this.host.onResume?.(); }
+
   async yield(thread) {
-    if (thread?.warpDepth > 0) return;
-    if (this.host.yield) return this.host.yield(thread);
-    return new Promise(resolve => setTimeout(resolve, this.turbo ? 0 : 1000 / this.framerate));
+    if(thread?.warpDepth>0) return;
+    while(this.running && this.paused && !thread?.cancelled) await new Promise(resolve=>setTimeout(resolve,30));
+    if(this.host.yield) return this.host.yield(thread);
+    return new Promise(resolve=>setTimeout(resolve,this.turbo?0:1000/this.framerate));
   }
 
   fence(target) {
@@ -148,10 +153,13 @@ export class NativeRuntime {
   }
 
   async wait(seconds, thread) {
-    const end = performance.now() + Math.max(0, this.constructor.number(seconds) * 1000);
-    while (this.running && !thread.cancelled && performance.now() < end) {
-      const remaining = end - performance.now();
-      await new Promise(resolve => setTimeout(resolve, Math.min(16, Math.max(1, remaining))));
+    let remaining=Math.max(0,this.constructor.number(seconds)*1000);
+    let last=performance.now();
+    while(this.running && !thread.cancelled && remaining>0) {
+      await new Promise(resolve=>setTimeout(resolve,Math.min(16,Math.max(1,remaining))));
+      const now=performance.now();
+      if(!this.paused) remaining-=now-last;
+      last=now;
     }
   }
 
