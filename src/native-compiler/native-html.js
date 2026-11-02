@@ -109,9 +109,13 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
   };
   const screenPoint = event => {
     const rect = canvas.getBoundingClientRect();
+    const scaleX=rect.width/stageWidth, scaleY=rect.height/stageHeight;
+    const uniform=project.nativeOptions.resizeMode==='stretch'?null:Math.min(scaleX,scaleY);
+    const drawScaleX=uniform===null?scaleX:uniform, drawScaleY=uniform===null?scaleY:uniform;
+    const offsetX=(rect.width-stageWidth*drawScaleX)/2, offsetY=(rect.height-stageHeight*drawScaleY)/2;
     return {
-      x: (event.clientX - rect.left) * stageWidth / rect.width - stageWidth / 2,
-      y: stageHeight / 2 - (event.clientY - rect.top) * stageHeight / rect.height
+      x: ((event.clientX-rect.left)-offsetX)/drawScaleX-stageWidth/2,
+      y: stageHeight/2-((event.clientY-rect.top)-offsetY)/drawScaleY
     };
   };
   const costumesFor = target => target.costumes || [];
@@ -168,7 +172,8 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
         const binary = atob(encoded);
         const bytes = new Uint8Array(binary.length);
         for (let i=0;i<binary.length;i++) bytes[i] = binary.charCodeAt(i);
-        audioBuffers.set(asset, audio.decodeAudioData(bytes.buffer).then(buffer=>{ delete project.nativeAssets[asset]; return buffer; }));
+        const decoding=audio.decodeAudioData(bytes.buffer).then(buffer=>{ delete project.nativeAssets[asset]; return buffer; }).catch(error=>{ audioBuffers.delete(asset); throw error; });
+        audioBuffers.set(asset,decoding);
       }
       const buffer = await audioBuffers.get(asset);
       await audio.resume();
