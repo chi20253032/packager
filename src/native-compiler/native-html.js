@@ -22,6 +22,20 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
     autoplay: !!options.autoplay, appearance: options.appearance || {},
     controls: options.controls || {}, monitors: options.monitors || {}, loadingScreen: options.loadingScreen || {},
     app: options.app || {}, cursor: options.cursor || {}, chunks: options.chunks || {}, cloudVariables: options.cloudVariables || {},
+    unsupportedSettings: [
+      ...(options.interpolation ? ['interpolation'] : []),
+      ...(options.highQualityPen ? ['highQualityPen'] : []),
+      ...(options.closeWhenStopped ? ['closeWhenStopped (browser tabs cannot be closed automatically)'] : []),
+      ...(options.compiler?.enabled === false ? ['compiler.enabled=false'] : []),
+      ...(options.compiler?.warpTimer ? ['compiler.warpTimer'] : []),
+      ...(options.chunks?.gamepad ? ['gamepad extension'] : []),
+      ...(options.cloudVariables?.specialCloudBehaviors ? ['special cloud-variable behaviors'] : []),
+      ...(options.app?.windowMode && options.app.windowMode !== 'window' ? ['native app window mode'] : []),
+      ...(options.app?.escapeBehavior && options.app.escapeBehavior !== 'unfullscreen-only' ? ['native app escape behavior'] : []),
+      ...(options.app?.windowControls && options.app.windowControls !== 'default' ? ['native app window controls'] : []),
+      ...(options.app?.backgroundThrottling ? ['native app background throttling'] : []),
+      ...(options.maxTextureDimension && options.maxTextureDimension !== 2048 ? ['maxTextureDimension'] : [])
+    ],
     projectId: options.projectId || project.projectId || '',
     custom: options.custom || {}
   };
@@ -521,7 +535,7 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
     try { (new Function('runtime', 'project', project.nativeOptions.custom.js))(runtime, project); }
     catch (error) { warning.hidden = false; warning.textContent = 'カスタムJavaScriptエラー: ' + error.message; }
   }
-  const unsupported = new Set();
+  const unsupported = new Set(project.nativeOptions.unsupportedSettings || []);
   for (const target of project.targets) {
     for (const block of Object.values(target.blocks || {})) {
       if (block && !block.shadow && !block.disabled && block.topLevel !== undefined) {
