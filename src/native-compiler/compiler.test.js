@@ -3,6 +3,19 @@ import {createNativeHTML} from './native-html';
 
 const block = (opcode, next = null, inputs = {}, fields = {}, topLevel = false) => ({
   opcode, next, inputs, fields, topLevel, shadow: false
+  test('maps pointer coordinates through the preserve-ratio stage letterbox', () => {
+    const html=createNativeHTML({targets:[{name:'Sprite1',blocks:{}}]},'Pointer test',{resizeMode:'preserve-ratio'});
+    expect(html).toContain('const offsetX=(rect.width-stageWidth*drawScaleX)/2');
+    expect(html).toContain('((event.clientX-rect.left)-offsetX)/drawScaleX');
+    expect(html).toContain('((event.clientY-rect.top)-offsetY)/drawScaleY');
+  });
+
+  test('retries audio asset decoding after a failed decode promise', () => {
+    const html=createNativeHTML({targets:[{name:'Sprite1',blocks:{}}]},'Audio test');
+    expect(html).toContain('audioBuffers.delete(asset)');
+    expect(html).toContain('const decoding=audio.decodeAudioData');
+  });
+
 });
 
 describe('native Scratch compiler', () => {
