@@ -3,7 +3,7 @@ import {createNativeHTML} from './native-html';
 
 const block = (opcode, next = null, inputs = {}, fields = {}, topLevel = false) => ({
   opcode, next, inputs, fields, topLevel, shadow: false
-});});
+});
 
 describe('native Scratch compiler', () => {
   test('compiles flag scripts and core motion commands', () => {
@@ -117,7 +117,8 @@ describe('native HTML mobile regression tests', () => {
 
   test('closes the root CSS rule before declaring the player body layout', () => {
     const html=createNativeHTML({targets:[{name:'Sprite1',blocks:{}}]},'CSS test');
-    expect(html).toMatch(/--accent:\\#4c97ff\\}\\s*body\\{/);
+    expect(html).toContain('--accent:#4c97ff}');
+    expect(html).toContain('body{display:flex;flex-direction:column');
   });
 });
 
