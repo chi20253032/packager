@@ -369,7 +369,7 @@ export class NativeRuntime {
           return bounds.left < -this.stageWidth/2 || bounds.right > this.stageWidth/2 || bounds.top > this.stageHeight/2 || bounds.bottom < -this.stageHeight/2;
         }
         const others=who==='_myself_'?[target]:this.targets.filter(item=>item.name===who);
-        return others.some(other=>other!==target && other.alive && this.overlaps(target,other));
+        return others.some(other=>other!==target && other.alive && other.visible && (this.host.touching ? this.host.touching(target,other) : this.overlaps(target,other)));
       }
       case 'motion_xposition': return target.x;
       case 'motion_yposition': return target.y;
@@ -380,7 +380,7 @@ export class NativeRuntime {
       case 'sensing_mousex': return this.mouse.x;
       case 'sensing_mousey': return this.mouse.y;
       case 'sensing_mousedown': return this.mouse.down;
-      case 'sensing_keypressed': return this.keys.has(this.constructor.keyName(await a('KEY_OPTION')));
+      case 'sensing_keypressed': return (this.constructor.keyName(await a('KEY_OPTION'))==='any' ? this.keys.size>0 : this.keys.has(this.constructor.keyName(await a('KEY_OPTION'))));
       case 'sensing_timer': return (performance.now() - this.startedAt) / 1000;
       case 'sensing_answer': return this.answer ?? '';
       case 'sensing_username': return this.username || 'player';
@@ -574,7 +574,7 @@ export class NativeRuntime {
       case 'sensing_askandwait': this.answer = await (this.host.ask ? this.host.ask(this.constructor.text(await v('QUESTION'))) : (typeof prompt === 'function' ? prompt(this.constructor.text(await v('QUESTION'))) : '')); break;
       case 'data_setvariableto': this.setVariable(target,this.fieldId(block,'VARIABLE'),await v('VALUE')); break;
       case 'data_changevariableby': {
-        const id=this.field(block,'VARIABLE'), current=this.getVariable(target,id).value;
+        const id=this.fieldId(block,'VARIABLE'), current=this.getVariable(target,id).value;
         this.setVariable(target,id,this.constructor.number(current)+await n('VALUE')); break;
       }
       case 'data_addtolist': { const id=this.fieldId(block,'LIST'),list=this.getList(target,id).value; list.push(await v('ITEM')); this.host.onList?.(target,id,list); break; }
@@ -584,7 +584,7 @@ export class NativeRuntime {
         else { const index=this.listIndex(indexValue,list.length); if(index>=0) list.splice(index,1); }
         this.host.onList?.(target,id,list); break;
       }
-      case 'data_deletealloflist': this.getList(target,this.field(block,'LIST')).value.length=0; break;
+      case 'data_deletealloflist': { const id=this.fieldId(block,'LIST'),list=this.getList(target,id).value; list.length=0; this.host.onList?.(target,id,list); break; }
       case 'data_insertatlist': {
         const list=this.getList(target,this.field(block,'LIST')).value, index=this.listIndex(await v('INDEX'),list.length,true);
         list.splice(index,0,await v('ITEM')); this.host.onList?.(target,this.fieldId(block,'LIST'),list); break;
@@ -594,7 +594,7 @@ export class NativeRuntime {
       case 'data_showlist': this.setMonitorVisible(this.fieldId(block,'LIST'),true); break;
       case 'data_hidelist': this.setMonitorVisible(this.fieldId(block,'LIST'),false); break;
       case 'data_replaceitemoflist': {
-        const list=this.getList(target,this.field(block,'LIST')).value, index=this.listIndex(await v('INDEX'),list.length);
+        const list=this.getList(target,this.fieldId(block,'LIST')).value, index=this.listIndex(await v('INDEX'),list.length);
         if (index>=0) list[index]=await v('ITEM'); this.host.onList?.(target,this.fieldId(block,'LIST'),list); break;
       }
       case 'control_wait': await this.wait(await n('DURATION'),thread); break;
@@ -709,11 +709,11 @@ export class NativeRuntime {
 
   keyDown(key) {
     const normalized=this.constructor.keyName(key);this.keys.add(normalized);
-    this.runHat('event_whenkeypressed',block=>this.constructor.keyName(block.fields?.KEY_OPTION?.[0])===normalized);
+    this.runHat('event_whenkeypressed',block=>{const option=this.constructor.keyName(block.fields?.KEY_OPTION?.[0]);return option===normalized||option==='any';});
   }
   keyUp(key) {this.keys.delete(this.constructor.keyName(key));}
   pointerMove(x,y) {this.mouse.x=this.constructor.number(x);this.mouse.y=this.constructor.number(y);}
-  pointerDown(x,y) {this.pointerMove(x,y);this.mouse.down=true;this.runHat('event_whenthisspriteclicked',(_b,t)=>!t.isStage&&this.host.hitTest?.(t,x,y));this.runHat('event_whenstageclicked',(_b,t)=>t.isStage);}
+  pointerDown(x,y) {this.pointerMove(x,y);this.mouse.down=true;const sprite=this.targets.filter(t=>!t.isStage&&t.alive&&t.visible).sort((a,b)=>b.layerOrder-a.layerOrder).find(t=>this.host.hitTest?.(t,x,y));if(sprite)this.runHat('event_whenthisspriteclicked',(_b,t)=>t===sprite);else this.runHat('event_whenstageclicked',(_b,t)=>t.isStage);}
   pointerUp() {this.mouse.down=false;}
 }
 
