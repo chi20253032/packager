@@ -325,4 +325,16 @@ describe('native runtime v2',()=>{
     runtime.stopAll();
   });
 
+  test('matches any-key sensing against the current pressed-key set',async()=>{
+    const project=makeProject({});
+    const runtime=new NativeRuntime(project);
+    const block=makeBlock('sensing_keypressed',null,{KEY_OPTION:[1,[10,'any']]});
+    const thread={cancelled:false};
+    expect(await runtime.evaluate(runtime.sprites[0],block,thread)).toBe(false);
+    runtime.keyDown('a');
+    expect(await runtime.evaluate(runtime.sprites[0],block,thread)).toBe(true);
+    runtime.keyUp('a');
+    expect(await runtime.evaluate(runtime.sprites[0],block,thread)).toBe(false);
+  });
+
 });
