@@ -567,7 +567,7 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
 ${iconMarkup}
 <style>
 *{box-sizing:border-box}
-html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#171b29;color:#f4f6ff;font:14px system-ui,-apple-system,"Segoe UI",sans-serif;--accent:${escapeHTML(nativeOptions.appearance.accent || '#4c97ff')}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#171b29;color:#f4f6ff;font:14px system-ui,-apple-system,"Segoe UI",sans-serif;--accent:${escapeHTML(nativeOptions.appearance.accent || '#4c97ff')}}
 body{display:flex;flex-direction:column;min-height:100dvh;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
 header{height:58px;flex:0 0 58px;display:flex;align-items:center;gap:10px;padding:8px 14px;background:#22283a;border-bottom:1px solid #394157}
 .brand{font-weight:800;letter-spacing:-.02em;white-space:nowrap}
