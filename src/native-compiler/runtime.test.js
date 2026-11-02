@@ -264,4 +264,65 @@ describe('native runtime v2',()=>{
     runtime.stopAll();
   });
 
+  test('uses stable variable and list IDs for change and clear operations',async()=>{
+    const project=makeProject({
+      flag:makeBlock('event_whenflagclicked','change',{}, {},true),
+      change:makeBlock('data_changevariableby','clear',{VALUE:[1,[4,'4']]},{VARIABLE:['score','score-id']}),
+      clear:makeBlock('data_deletealloflist',null,{}, {LIST:['items','items-id']})
+    });
+    project.targets[1].variables={'score-id':['score',3]};
+    project.targets[1].lists={'items-id':['items',['a','b']]};
+    const runtime=new NativeRuntime(project);
+    runtime.start();
+    await new Promise(resolve=>setTimeout(resolve,10));
+    expect(runtime.sprites[0].variables['score-id'].value).toBe(7);
+    expect(runtime.sprites[0].lists['items-id'].value).toEqual([]);
+    runtime.stopAll();
+  });
+
+  test('uses host pixel collision callback instead of bounding boxes when available',async()=>{
+    const project=makeProject({
+      flag:makeBlock('event_whenflagclicked','set',{}, {},true),
+      set:makeBlock('data_setvariableto',null,{VALUE:[2,'touch']},{VARIABLE:['score','score']}),
+      touch:makeBlock('sensing_touchingobject',null,{TOUCHINGOBJECTMENU:[1,[10,'Sprite2']]})
+    });
+    const runtime=new NativeRuntime(project,{touching:()=>false});
+    const a=runtime.sprites[0];
+    const b={...a,id:'other',name:'Sprite2',x:0,y:0,alive:true,visible:true};
+    runtime.targets.push(b);
+    const result=await runtime.evaluate(a,a.blocks.touch,{cancelled:false});
+    expect(result).toBe(false);
+  });
+
+  test('dispatches clicks only to the topmost visible sprite',()=>{
+    const project=makeProject({});
+    const runtime=new NativeRuntime(project);
+    const first=runtime.sprites[0];
+    const second={...first,id:'top',name:'Top',layerOrder:first.layerOrder+1,blocks:{top:makeBlock('event_whenthisspriteclicked',null,{}, {},true)}};
+    first.blocks={bottom:makeBlock('event_whenthisspriteclicked',null,{}, {},true)};
+    runtime.targets.push(second);
+    const clicked=[];
+    runtime.host.hitTest=target=>target===first||target===second;
+    runtime.host.onStart=()=>{};
+    runtime.launch=(target)=>{clicked.push(target.name);return Promise.resolve();};
+    runtime.running=true;
+    runtime.pointerDown(0,0);
+    expect(clicked).toEqual(['Top']);
+    runtime.stopAll();
+  });
+
+  test('supports any-key sensing and event hats',async()=>{
+    const project=makeProject({
+      flag:makeBlock('event_whenflagclicked',null,{}, {},true),
+      any:makeBlock('event_whenkeypressed','increment',{}, {KEY_OPTION:['any',null]},true),
+      increment:makeBlock('data_changevariableby',null,{VALUE:[1,[4,'1']]},{VARIABLE:['score','score']})
+    });
+    const runtime=new NativeRuntime(project);
+    runtime.start();
+    runtime.keyDown('q');
+    await new Promise(resolve=>setTimeout(resolve,5));
+    expect(runtime.sprites[0].variables.score.value).toBe(1);
+    runtime.stopAll();
+  });
+
 });
