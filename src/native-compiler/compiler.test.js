@@ -16,6 +16,11 @@ const block = (opcode, next = null, inputs = {}, fields = {}, topLevel = false) 
     expect(html).toContain('const decoding=audio.decodeAudioData');
   });
 
+  test('closes the root CSS rule before declaring the player body layout', () => {
+    const html=createNativeHTML({targets:[{name:'Sprite1',blocks:{}}]},'CSS test');
+    expect(html).toMatch(/--accent:\\#4c97ff\\}\\s*body\\{/);
+  });
+
 });
 
 describe('native Scratch compiler', () => {
