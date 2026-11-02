@@ -101,6 +101,18 @@ describe('native Scratch compiler', () => {
   });
 });
 
+  test('does not render or hit-test sprites with zero size', () => {
+    const html=createNativeHTML({targets:[{name:'Sprite1',blocks:{}}]},'Zero size');
+    expect(html).toContain('Number(target.size)===0');
+    expect(html).toContain('if(!Number.isFinite(rawSize)||rawSize===0) return false');
+  });
+
+  test('mirrors left-right sprite hit testing consistently with rendering', () => {
+    const html=createNativeHTML({targets:[{name:'Sprite1',blocks:{}}]},'Mirrored hit test');
+    expect(html).toContain("target.rotationStyle==='left-right' && (target.direction<0||target.direction>180)");
+    expect(html).toContain('localX=-localX');
+  });
+
 describe('native HTML mobile regression tests', () => {
   test('maps pointer coordinates through the preserve-ratio stage letterbox', () => {
     const html=createNativeHTML({targets:[{name:'Sprite1',blocks:{}}]},'Pointer test',{resizeMode:'preserve-ratio'});
