@@ -251,7 +251,7 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
       const bx = Math.max(-stageWidth / 2, Math.min(stageWidth / 2 - width, target.x + 18));
       const by = Math.max(-stageHeight / 2 + 32, Math.min(stageHeight / 2 - 8, -target.y - 52));
       context.fillStyle = '#fff'; context.strokeStyle = '#333'; context.lineWidth = 1.5;
-      context.beginPath(); context.roundRect(bx, by, width, 34, 9); context.fill(); context.stroke();
+      context.beginPath(); if (typeof context.roundRect === 'function') context.roundRect(bx, by, width, 34, 9); else { const radius=9; context.moveTo(bx+radius,by); context.lineTo(bx+width-radius,by); context.quadraticCurveTo(bx+width,by,bx+width,by+radius); context.lineTo(bx+width,by+34-radius); context.quadraticCurveTo(bx+width,by+34,bx+width-radius,by+34); context.lineTo(bx+radius,by+34); context.quadraticCurveTo(bx,by+34,bx,by+34-radius); context.lineTo(bx,by+radius); context.quadraticCurveTo(bx,by,bx+radius,by); } context.closePath(); context.fill(); context.stroke();
       context.fillStyle = '#222'; context.textAlign = 'left'; context.textBaseline = 'middle';
       context.fillText(bubbleText, bx + 10, by + 17, width - 20);
       context.restore();
@@ -516,6 +516,7 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
     for (const block of Object.values(target.blocks || {})) {
       if (block && !block.shadow && !block.disabled && block.topLevel !== undefined) {
         if (!NATIVE_RUNTIME_SUPPORTED.has(block.opcode) && !runtime.extensions[block.opcode]) unsupported.add(block.opcode);
+        if ((block.opcode === 'looks_seteffectto' || block.opcode === 'looks_changeeffectby') && !['color','brightness','ghost'].includes(String(block.fields?.EFFECT?.[0] || '').toLowerCase())) unsupported.add('graphic effect: ' + String(block.fields?.EFFECT?.[0] || 'unknown').toLowerCase());
       }
     }
   }
