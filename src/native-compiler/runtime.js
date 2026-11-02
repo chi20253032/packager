@@ -536,9 +536,9 @@ export class NativeRuntime {
       }
       case 'looks_cleargraphiceffects': target.effects={}; break;
       case 'looks_changeeffectby': {
-        const effect=this.field(block,'EFFECT'); target.effects[effect]=this.constructor.number(target.effects[effect])+await n('CHANGE'); break;
+        const effect=this.field(block,'EFFECT').toLowerCase(); target.effects[effect]=this.constructor.number(target.effects[effect])+await n('CHANGE'); break;
       }
-      case 'looks_seteffectto': target.effects[this.field(block,'EFFECT')]=await n('VALUE'); break;
+      case 'looks_seteffectto': target.effects[this.field(block,'EFFECT').toLowerCase()]=await n('VALUE'); break;
       case 'looks_goforwardbackwardlayers': target.layerOrder += (this.field(block,'FORWARD_BACKWARD')==='forward'?1:-1)*await n('NUM'); break;
       case 'music_setInstrument': this.instrument=this.constructor.clamp(Math.floor(await n('INSTRUMENT')),1,21); break;
       case 'music_changeTempo': this.tempo=this.constructor.clamp(this.tempo+await n('TEMPO'),20,500); break;
