@@ -438,6 +438,16 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
       warning.textContent = '未対応ブロック: ' + current.join(' / ');
     },
     hitTest,
+    touching(a,b) {
+      const first=runtime.bounds(a),second=runtime.bounds(b);
+      const left=Math.max(first.left,second.left),right=Math.min(first.right,second.right);
+      const bottom=Math.max(first.bottom,second.bottom),top=Math.min(first.top,second.top);
+      if(left>=right||bottom>=top) return false;
+      const area=(right-left)*(top-bottom);
+      const step=Math.max(1,Math.sqrt(area/12000));
+      for(let y=bottom+step/2;y<top;y+=step) for(let x=left+step/2;x<right;x+=step) if(hitTest(a,x,y)&&hitTest(b,x,y)) return true;
+      return false;
+    },
     playSound,
     playMusicNote,
     playMusicDrum,
