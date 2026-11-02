@@ -239,4 +239,29 @@ describe('native runtime v2',()=>{
     expect(unsupported).toContain('extension_example_custom');
     runtime.stopAll();
   });
+  test('normalizes Scratch graphic effect menu names before rendering',async()=>{
+    const project=makeProject({
+      flag:makeBlock('event_whenflagclicked','set',{}, {},true),
+      set:makeBlock('looks_seteffectto',null,{VALUE:[1,[4,'35']]},{EFFECT:['BRIGHTNESS',null]})
+    });
+    const runtime=new NativeRuntime(project);
+    runtime.start();
+    await new Promise(resolve=>setTimeout(resolve,5));
+    expect(runtime.sprites[0].effects.brightness).toBe(35);
+    expect(runtime.sprites[0].effects.BRIGHTNESS).toBeUndefined();
+    runtime.stopAll();
+  });
+
+  test('changes existing Scratch graphic effects using normalized keys',async()=>{
+    const project=makeProject({
+      flag:makeBlock('event_whenflagclicked','change',{}, {},true),
+      change:makeBlock('looks_changeeffectby',null,{CHANGE:[1,[4,'12']]},{EFFECT:['GHOST',null]})
+    });
+    const runtime=new NativeRuntime(project);
+    runtime.start();
+    await new Promise(resolve=>setTimeout(resolve,5));
+    expect(runtime.sprites[0].effects.ghost).toBe(12);
+    runtime.stopAll();
+  });
+
 });
