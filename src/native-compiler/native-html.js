@@ -123,11 +123,14 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
   const alphaMasks = new WeakMap();
   const hitTest = (target, x, y) => {
     if (!target || !target.visible || !target.alive) return false;
-    const costume=currentCostume(target), image=imageFor(costume), scale=Math.max(0.001,Math.abs(target.size||100)/100);
+    const costume=currentCostume(target), image=imageFor(costume), rawSize=Number(target.size==null?100:target.size);
+    if(!Number.isFinite(rawSize)||rawSize===0) return false;
+    const scale=Math.abs(rawSize)/100;
     const angle=target.rotationStyle==='all around'?((target.direction||90)-90)*Math.PI/180:0;
     const dx=x-target.x, dy=-(y-target.y);
-    const localX=(dx*Math.cos(angle)+dy*Math.sin(angle))/scale;
+    let localX=(dx*Math.cos(angle)+dy*Math.sin(angle))/scale;
     const localY=(-dx*Math.sin(angle)+dy*Math.cos(angle))/scale;
+    if(target.rotationStyle==='left-right' && (target.direction<0||target.direction>180)) localX=-localX;
     const cx=Number.isFinite(costume?.rotationCenterX)?costume.rotationCenterX:(image?.naturalWidth||48)/2;
     const cy=Number.isFinite(costume?.rotationCenterY)?costume.rotationCenterY:(image?.naturalHeight||48)/2;
     const px=Math.floor(localX+cx), py=Math.floor(localY+cy);
@@ -237,7 +240,7 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
   };
 
   const drawTarget = target => {
-    if (!target.visible || !target.alive) return;
+    if (!target.visible || !target.alive || Number(target.size)===0) return;
     const costume = currentCostume(target);
     const image = imageFor(costume);
     context.save();
@@ -429,7 +432,9 @@ export const createNativeHTML = (project, title = 'Scratch project', options = {
       penContext.save();
       penContext.translate(target.x + stageWidth / 2, stageHeight / 2 - target.y);
       if (target.rotationStyle === 'all around') penContext.rotate(((target.direction || 90) - 90) * Math.PI / 180);
-      penContext.scale((target.size || 100) / 100, (target.size || 100) / 100);
+      const stampScale=Number(target.size==null?100:target.size)/100;
+      if(stampScale===0){penContext.restore();return;}
+      penContext.scale(stampScale,stampScale);
       const cx = Number.isFinite(costume.rotationCenterX) ? costume.rotationCenterX : image.naturalWidth / 2;
       const cy = Number.isFinite(costume.rotationCenterY) ? costume.rotationCenterY : image.naturalHeight / 2;
       penContext.drawImage(image, -cx, -cy);
