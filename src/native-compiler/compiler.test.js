@@ -88,9 +88,49 @@ describe('native Scratch compiler', () => {
     expect(html).toContain('Native Test');
     expect(html).not.toContain('Scaffolding');
     expect(html).not.toContain('scratch-vm');
+    expect(html).toContain('class NativeRuntime');
+    const scriptStart = html.indexOf('<script>') + '<script>'.length;
+    const scriptEnd = html.lastIndexOf('</script>');
+    const script = html.slice(scriptStart, scriptEnd);
+    expect(script).toContain('NATIVE_RUNTIME_SUPPORTED');
+    expect(() => new Function(script)).not.toThrow();
   });
 
   test('rejects malformed project data', () => {
     expect(() => compileNativeProject({})).toThrow('targets are missing');
   });
 });
+
+  test('does not render or hit-test sprites with zero size', () => {
+    const html=createNativeHTML({targets:[{name:'Sprite1',blocks:{}}]},'Zero size');
+    expect(html).toContain('Number(target.size)===0');
+    expect(html).toContain('if(!Number.isFinite(rawSize)||rawSize===0) return false');
+  });
+
+  test('mirrors left-right sprite hit testing consistently with rendering', () => {
+    const html=createNativeHTML({targets:[{name:'Sprite1',blocks:{}}]},'Mirrored hit test');
+    expect(html).toContain("target.rotationStyle==='left-right' && (target.direction<0||target.direction>180)");
+    expect(html).toContain('localX=-localX');
+  });
+
+describe('native HTML mobile regression tests', () => {
+  test('maps pointer coordinates through the preserve-ratio stage letterbox', () => {
+    const html=createNativeHTML({targets:[{name:'Sprite1',blocks:{}}]},'Pointer test',{resizeMode:'preserve-ratio'});
+    expect(html).toContain('const offsetX=(rect.width-stageWidth*drawScaleX)/2');
+    expect(html).toContain('((event.clientX-rect.left)-offsetX)/drawScaleX');
+    expect(html).toContain('((event.clientY-rect.top)-offsetY)/drawScaleY');
+  });
+
+  test('retries audio asset decoding after a failed decode promise', () => {
+    const html=createNativeHTML({targets:[{name:'Sprite1',blocks:{}}]},'Audio test');
+    expect(html).toContain('audioBuffers.delete(asset)');
+    expect(html).toContain('const decoding=audio.decodeAudioData');
+  });
+
+  test('closes the root CSS rule before declaring the player body layout', () => {
+    const html=createNativeHTML({targets:[{name:'Sprite1',blocks:{}}]},'CSS test');
+    expect(html).toContain('--accent:#4c97ff}');
+    expect(html).toContain('body{display:flex;flex-direction:column');
+  });
+});
+

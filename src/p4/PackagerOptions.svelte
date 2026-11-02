@@ -323,6 +323,123 @@
     display: flex;
     margin-left: auto;
   }
+
+  .option {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 10px;
+    min-height: 42px;
+    padding: 7px 9px;
+    margin: 5px 0;
+    border-radius: 11px;
+    line-height: 1.45;
+  }
+  .option:has(input[type="checkbox"]:checked) {
+    background: rgba(57, 120, 232, .055);
+  }
+  .group {
+    margin: 14px 0;
+    padding: 10px;
+    border: 1px solid rgba(120, 140, 170, .2);
+    border-radius: 14px;
+    background: rgba(120, 140, 170, .035);
+  }
+  .group .option {
+    margin: 2px 0;
+  }
+  p {
+    margin: 9px 0;
+    line-height: 1.6;
+  }
+  textarea {
+    min-height: 170px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 14px !important;
+    line-height: 1.5;
+  }
+  input[type="text"] {
+    width: min(100%, 280px);
+  }
+  input[type="text"].shorter {
+    width: min(100%, 220px);
+  }
+  input[type="number"] {
+    width: 88px;
+  }
+  input:invalid, .version:placeholder-shown {
+    outline: 2px solid #d94848;
+    outline-offset: 1px;
+  }
+  .warning {
+    font-weight: 650;
+    background: #fff2d8;
+    color: #6b3b00;
+    padding: 13px 15px;
+    border: 1px solid #f0cf91;
+    border-radius: 13px;
+    line-height: 1.55;
+  }
+  :global([theme="dark"]) .warning {
+    background: #382b1b;
+    color: #ffe0ae;
+    border-color: #795b32;
+  }
+  .buttons {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 9px;
+  }
+  .button {
+    margin: 0;
+  }
+  .side-buttons {
+    display: flex;
+    margin-left: auto;
+  }
+  details {
+    padding: 12px;
+    border: 1px solid rgba(120, 140, 170, .22);
+    border-radius: 14px;
+    background: rgba(120, 140, 170, .035);
+  }
+  summary {
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  @media (max-width: 640px) {
+    .option {
+      align-items: flex-start;
+      padding: 8px 4px;
+    }
+    .option input[type="text"],
+    .option input[type="number"],
+    .option select {
+      flex: 1 1 145px;
+      min-width: 0;
+    }
+    .buttons {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .buttons > .button,
+    .buttons > div {
+      min-width: 0;
+    }
+    .side-buttons {
+      margin-left: 0;
+      grid-column: 1 / -1;
+      justify-content: flex-end;
+    }
+    .buttons button {
+      width: 100%;
+    }
+  }
+
 </style>
 
 <Section
@@ -1079,7 +1196,7 @@
     <div class="button">
       <Button on:click={pack} text={$_('options.package')} />
     </div>
-    <div clas="button">
+    <div class="button">
       <Button on:click={preview} secondary text={$_('options.preview')} />
     </div>
   </div>
